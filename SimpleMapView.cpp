@@ -18,7 +18,7 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_tileSize(256),
 	m_abortingReplies(false)
 {
-	this->setTileServer("https://mt0.google.com/vt/lyrs=m&hl=en&x=%1&y=%2&z=%3&s=Ga");
+	this->setTileServer("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga");
 }
 
 void SimpleMapView::resize(int w, int h)
@@ -143,7 +143,7 @@ void SimpleMapView::setTileServer(const QString& tileServer)
 
 	// find tile size
 	{
-		QNetworkRequest request(m_tileServer.arg(0).arg(0).arg(m_zoomLevel));
+		QNetworkRequest request(this->getTileServerUrl(QPoint(0, 0), 0));
 		request.setTransferTimeout(5000);
 
 		QNetworkReply* reply = m_networkManager.get(request);
@@ -207,6 +207,15 @@ QPoint SimpleMapView::getTilePosition(const QString& tileKey) const
 	return QPoint(x, y);
 }
 
+QUrl SimpleMapView::getTileServerUrl(const QPoint& tilePosition, int zoomLevel) const
+{
+	QString temp = m_tileServer;
+	temp.replace("{x}", QString::number(tilePosition.x()));
+	temp.replace("{y}", QString::number(tilePosition.y()));
+	temp.replace("{z}", QString::number(zoomLevel));
+	return QUrl(temp);
+}
+
 void SimpleMapView::updateMap()
 {
 	const QSize requiredTileCount = this->calcRequiredTileCount();
@@ -256,7 +265,7 @@ void SimpleMapView::updateMap()
 
 void SimpleMapView::fetchTile(const QPoint& tilePosition)
 {
-	QNetworkRequest request(m_tileServer.arg(tilePosition.x()).arg(tilePosition.y()).arg(m_zoomLevel));
+	QNetworkRequest request(this->getTileServerUrl(tilePosition, m_zoomLevel));
 	request.setTransferTimeout(5000);
 
 	const QString tileKey = this->getTileKey(tilePosition);
@@ -363,11 +372,14 @@ void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 {
 	if (event->buttons() & Qt::LeftButton)
 	{
+		constexpr double latitudeSpeed = 180.0 / 167.0;
+		constexpr double longitudeSpeed = 360.0 / 256.0;
+
 		const QPoint currentMousePosition = event->pos();
 		const QPoint deltaMousePosition = currentMousePosition - m_lastMousePosition;
 
-		const double deltaLatitude = (180.0 / 400.0) / m_tileCountPerAxis;
-		const double deltaLongitude = (360.0 / 400.0) / m_tileCountPerAxis;
+		const double deltaLatitude = latitudeSpeed / m_tileCountPerAxis;
+		const double deltaLongitude = longitudeSpeed / m_tileCountPerAxis;
 
 		this->setCenter(this->latitude() + deltaMousePosition.y() * deltaLatitude, this->longitude() - deltaMousePosition.x() * deltaLongitude);
 

@@ -44,6 +44,7 @@ protected:
 	bool validateTilePosition(const QPoint& tilePosition) const;
 	QString getTileKey(const QPoint& tilePosition) const;
 	QPoint getTilePosition(const QString& tileKey) const;
+	QUrl getTileServerUrl(const QPoint& tilePosition, int zoomLevel) const;
 	void updateMap();
 	void fetchTile(const QPoint& tilePosition);
 	void abortReplies();

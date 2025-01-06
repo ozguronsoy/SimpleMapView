@@ -16,7 +16,9 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_nTilesToFetch(0),
 	m_fetchedTileCount(0),
 	m_tileSize(256),
-	m_abortingReplies(false)
+	m_abortingReplies(false),
+	m_zoomEnabled(true),
+	m_mapMoveEnabled(true)
 {
 	this->setTileServer("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga");
 }
@@ -60,6 +62,8 @@ int SimpleMapView::zoomLevel() const
 
 void SimpleMapView::setZoomLevel(int zoomLevel)
 {
+	if (!this->isEnabled() || !this->isZoomEnabled()) return;
+
 	const int oldZoomLevel = m_zoomLevel;
 	m_zoomLevel = std::min(std::max(zoomLevel, m_minZoomLevel), m_maxZoomLevel);
 
@@ -106,6 +110,8 @@ void SimpleMapView::setCenter(const QGeoCoordinate& center)
 
 void SimpleMapView::setCenter(double latitude, double longitude)
 {
+	if (!this->isEnabled() || !this->isMapMoveEnabled()) return;
+
 	assert((void("latitude must be between -90 to 90 inclusive"), (latitude >= -90) && (latitude <= 90)));
 	assert((void("longitude must be between -180 to 180 inclusive"), (longitude >= -180) && (longitude <= 180)));
 
@@ -171,6 +177,26 @@ void SimpleMapView::setTileServer(const QString& tileServer)
 	}
 
 	this->updateMap();
+}
+
+bool SimpleMapView::isZoomEnabled() const
+{
+	return m_zoomEnabled;
+}
+
+void SimpleMapView::setZoomEnabled(bool enabled)
+{
+	m_zoomEnabled = enabled;
+}
+
+bool SimpleMapView::isMapMoveEnabled() const
+{
+	return m_mapMoveEnabled;
+}
+
+void SimpleMapView::setMapMoveEnabled(bool enabled)
+{
+	m_mapMoveEnabled = enabled;
 }
 
 QSize SimpleMapView::calcRequiredTileCount() const

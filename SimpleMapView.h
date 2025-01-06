@@ -38,6 +38,12 @@ public:
 	const QString& tileServer() const;
 	void setTileServer(const QString& tileServer);
 
+	bool isZoomEnabled() const;
+	void setZoomEnabled(bool enabled);
+
+	bool isMapMoveEnabled() const;
+	void setMapMoveEnabled(bool enabled);
+
 protected:
 	QSize calcRequiredTileCount() const;
 	QPointF calcCenterTilePosition() const;
@@ -68,6 +74,9 @@ private:
 	int m_fetchedTileCount;
 	int m_tileSize;
 	bool m_abortingReplies;
+
+	bool m_zoomEnabled;
+	bool m_mapMoveEnabled;
 
 	QPoint m_lastMousePosition;
 

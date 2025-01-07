@@ -4,6 +4,7 @@
 #include <QEventLoop>
 #include <QPainter>
 #include <QWheelEvent>
+#include <QDebug>
 
 SimpleMapView::SimpleMapView(QWidget* parent)
 	: QWidget(parent),
@@ -11,10 +12,9 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_maxZoomLevel(21),
 	m_zoomLevel(17),
 	m_tileCountPerAxis(1 << m_zoomLevel),
+	m_tileServer(SimpleMapView::INVALID_TILE_SERVER),
 	m_center(39.912341799204775, 32.851170267919244),
 	m_networkManager(this),
-	m_nTilesToFetch(0),
-	m_fetchedTileCount(0),
 	m_tileSize(256),
 	m_abortingReplies(false),
 	m_zoomEnabled(true),
@@ -144,38 +144,37 @@ void SimpleMapView::setTileServer(const QString& tileServer)
 {
 	if (tileServer == m_tileServer) return;
 
-	// maybe add validation
 	m_tileServer = tileServer;
 
-	// find tile size
+	QNetworkRequest request(this->getTileServerUrl(QPoint(0, 0), 0));
+	request.setTransferTimeout(5000);
+
+	QNetworkReply* reply = m_networkManager.get(request);
+
+	QEventLoop eventLoop;
+	(void)this->connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
+	(void)eventLoop.exec();
+
+	if (reply->error() == QNetworkReply::NoError)
 	{
-		QNetworkRequest request(this->getTileServerUrl(QPoint(0, 0), 0));
-		request.setTransferTimeout(5000);
-
-		QNetworkReply* reply = m_networkManager.get(request);
-
-		QEventLoop eventLoop;
-		(void)this->connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
-		(void)eventLoop.exec();
-
-		if (reply->error() == QNetworkReply::NoError)
+		QImage tileImage;
+		tileImage.loadFromData(reply->readAll());
+		if (tileImage.width() > 0)
 		{
-			QImage tileImage;
-			tileImage.loadFromData(reply->readAll());
-			if (tileImage.width() > 0)
-			{
-				m_tileSize = tileImage.width();
-			}
+			m_tileSize = tileImage.width();
 		}
-		else
-		{
-			// TODO error handling
-			qDebug() << "SimpleMapView: " << reply->errorString();
-		}
-
-		reply->deleteLater();
+	}
+	else
+	{
+		qDebug() << "[SimpleMapView]" << reply->errorString();
+		qDebug() << "[SimpleMapView]" << "failed to set the tile server to" << m_tileServer;
+		m_tileServer = SimpleMapView::INVALID_TILE_SERVER;
 	}
 
+	reply->deleteLater();
+
+	this->abortReplies();
+	m_tileMap.clear();
 	this->updateMap();
 }
 
@@ -199,18 +198,35 @@ void SimpleMapView::setMapMoveEnabled(bool enabled)
 	m_mapMoveEnabled = enabled;
 }
 
-QSize SimpleMapView::calcRequiredTileCount() const
+QPoint SimpleMapView::calcRequiredTileCount() const
 {
 	const int x = std::ceil(((double)this->width()) / m_tileSize);
 	const int y = std::ceil(((double)this->height()) / m_tileSize);
 
-	return QSize(x, y);
+	return QPoint(x, y);
 }
 
 QPointF SimpleMapView::calcCenterTilePosition() const
 {
 	const double x = ((this->longitude() + 180.0) / (360.0)) * m_tileCountPerAxis;
 	const double y = (1.0 - (std::log(std::tan(M_PI_4 + (this->latitude() * M_PI / 360.0))) / M_PI)) * 0.5 * m_tileCountPerAxis;
+
+	return QPointF(x, y);
+}
+
+QPointF SimpleMapView::calcTileScreenPosition(const QString& tileKey) const
+{
+	return this->calcTileScreenPosition(this->getTilePosition(tileKey));
+}
+
+QPointF SimpleMapView::calcTileScreenPosition(const QPoint& tilePosition) const
+{
+	const QPointF relativeTilePosition = tilePosition - this->calcCenterTilePosition();
+	const double w_2 = this->width() / 2.0;
+	const double h_2 = this->height() / 2.0;
+
+	const double x = w_2 + (relativeTilePosition.x() * m_tileSize);
+	const double y = h_2 + (relativeTilePosition.y() * m_tileSize);
 
 	return QPointF(x, y);
 }
@@ -244,21 +260,17 @@ QUrl SimpleMapView::getTileServerUrl(const QPoint& tilePosition, int zoomLevel) 
 
 void SimpleMapView::updateMap()
 {
-	const QSize requiredTileCount = this->calcRequiredTileCount();
+	if (m_tileServer == SimpleMapView::INVALID_TILE_SERVER) return;
+
+	const QPoint requiredTileCount = this->calcRequiredTileCount();
 	const QPointF centerTilePosition = this->calcCenterTilePosition();
 
-	const int x_start = (-requiredTileCount.width() / 2) - 1;
-	const int x_end = (requiredTileCount.width() / 2) + 1;
-	const int y_start = (-requiredTileCount.height() / 2) - 1;
-	const int y_end = (requiredTileCount.height() / 2) + 1;
+	const int x_start = (-requiredTileCount.x() / 2) - 1;
+	const int x_end = (requiredTileCount.x() / 2) + 1;
+	const int y_start = (-requiredTileCount.y() / 2) - 1;
+	const int y_end = (requiredTileCount.y() / 2) + 1;
 
-	m_fetchedTileCount = 0;
-	m_nTilesToFetch = 0;
-
-	// find the tiles that will be fetched
-	std::vector<QPoint> tilePositions;
-	tilePositions.reserve((x_end - x_start + 1) * (y_end - y_start + 1));
-
+	bool noNewTiles = true;
 	for (int x = x_start; x <= x_end; ++x)
 	{
 		for (int y = y_start; y <= y_end; ++y)
@@ -270,30 +282,19 @@ void SimpleMapView::updateMap()
 				m_replyMap.find(tileKey) == m_replyMap.end() &&
 				m_tileMap.find(tileKey) == m_tileMap.end())
 			{
-				tilePositions.push_back(tilePosition);
-				m_nTilesToFetch++;
+				noNewTiles = false;
+				this->fetchTile(tilePosition);
 			}
 		}
 	}
-
-	// if the map is moved but no new tiles are required, update the widget
-	if (m_nTilesToFetch == 0)
-	{
-		this->update();
-		return;
-	}
-
-	for (const QPoint& tilePosition : tilePositions)
-	{
-		this->fetchTile(tilePosition);
-	}
+	if (noNewTiles) this->update();
 }
 
 void SimpleMapView::fetchTile(const QPoint& tilePosition)
 {
-	QNetworkRequest request(this->getTileServerUrl(tilePosition, m_zoomLevel));
-	request.setTransferTimeout(5000);
+	if (m_tileServer == SimpleMapView::INVALID_TILE_SERVER) return;
 
+	const QNetworkRequest request(this->getTileServerUrl(tilePosition, m_zoomLevel));
 	const QString tileKey = this->getTileKey(tilePosition);
 	QNetworkReply* reply = m_networkManager.get(request);
 	m_replyMap[tileKey] = reply;
@@ -311,8 +312,7 @@ void SimpleMapView::fetchTile(const QPoint& tilePosition)
 			}
 			else
 			{
-				// TODO error handling
-				qDebug() << "SimpleMapView: " << reply->errorString();
+				qDebug() << "[SimpleMapView]" << reply->errorString();
 			}
 
 			reply->deleteLater();
@@ -321,8 +321,7 @@ void SimpleMapView::fetchTile(const QPoint& tilePosition)
 				(void)m_replyMap.erase(tileKey);
 			}
 
-			m_fetchedTileCount++;
-			if (m_fetchedTileCount == m_nTilesToFetch)
+			if (m_replyMap.size() == 0)
 			{
 				this->update();
 			}
@@ -346,28 +345,36 @@ void SimpleMapView::abortReplies()
 	m_replyMap.clear();
 }
 
+std::vector<QString> SimpleMapView::getTilesToRender() const
+{
+	std::vector<QString> tileKeys;
+	tileKeys.reserve(m_tileMap.size());
+
+	const QRectF renderRect(0, 0, this->width(), this->height());
+
+	for (const auto& tile : m_tileMap)
+	{
+		const QPointF tilePosition = this->calcTileScreenPosition(tile.first);
+		const QRectF tileRect(tilePosition, QSizeF(m_tileSize, m_tileSize));
+
+		if (tileRect.intersects(renderRect))
+		{
+			tileKeys.push_back(tile.first);
+		}
+	}
+
+	return tileKeys;
+}
+
 void SimpleMapView::paintEvent(QPaintEvent* event)
 {
 	QPainter paint(this);
 	paint.fillRect(event->region().boundingRect(), paint.background());
 
-	const QSize requiredTileCount = this->calcRequiredTileCount();
-	const QPointF centerTilePosition = this->calcCenterTilePosition();
-
-	const int w_2 = this->width() / 2;
-	const int h_2 = this->height() / 2;
-	const int tw = m_tileSize;
-	const int th = m_tileSize;
-
-	for (const auto& tile : m_tileMap)
+	for (const auto& tileKey : this->getTilesToRender())
 	{
-		const QPoint p = this->getTilePosition(tile.first);
-
-		paint.drawImage(
-			w_2 + ((p.x() - centerTilePosition.x()) * tw),
-			h_2 + ((p.y() - centerTilePosition.y()) * th),
-			*tile.second
-		);
+		const QPointF tileScreenPosition = this->calcTileScreenPosition(tileKey);
+		paint.drawImage(tileScreenPosition.x(), tileScreenPosition.y(), *m_tileMap[tileKey]);
 	}
 
 	QWidget::paintEvent(event);
@@ -404,10 +411,10 @@ void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 		const QPoint currentMousePosition = event->pos();
 		const QPoint deltaMousePosition = currentMousePosition - m_lastMousePosition;
 
-		const double deltaLatitude = latitudeSpeed / m_tileCountPerAxis;
-		const double deltaLongitude = longitudeSpeed / m_tileCountPerAxis;
+		const double newLatitude = this->latitude() + deltaMousePosition.y() * latitudeSpeed / m_tileCountPerAxis;
+		const double newLongitude = this->longitude() - deltaMousePosition.x() * longitudeSpeed / m_tileCountPerAxis;
 
-		this->setCenter(this->latitude() + deltaMousePosition.y() * deltaLatitude, this->longitude() - deltaMousePosition.x() * deltaLongitude);
+		this->setCenter(newLatitude, newLongitude);
 
 		m_lastMousePosition = currentMousePosition;
 	}

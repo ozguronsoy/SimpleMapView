@@ -1,5 +1,6 @@
 #include <unordered_map>
 #include <memory>
+#include <vector>
 #include <QWidget>
 #include <QGeoCoordinate>
 #include <QNetworkAccessManager>
@@ -45,16 +46,23 @@ public:
 	void setMapMoveEnabled(bool enabled);
 
 protected:
-	QSize calcRequiredTileCount() const;
+	QPoint calcRequiredTileCount() const;
 	QPointF calcCenterTilePosition() const;
+	QPointF calcTileScreenPosition(const QString& tileKey) const;
+	QPointF calcTileScreenPosition(const QPoint& tilePosition) const;
+
 	bool validateTilePosition(const QPoint& tilePosition) const;
+
 	QString getTileKey(const QPoint& tilePosition) const;
 	QPoint getTilePosition(const QString& tileKey) const;
 	QUrl getTileServerUrl(const QPoint& tilePosition, int zoomLevel) const;
+
 	void updateMap();
 	void fetchTile(const QPoint& tilePosition);
 	void abortReplies();
 	
+	std::vector<QString> getTilesToRender() const;
+
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void wheelEvent(QWheelEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
@@ -70,8 +78,6 @@ private:
 
 	QString m_tileServer;
 	QNetworkAccessManager m_networkManager;
-	int m_nTilesToFetch;
-	int m_fetchedTileCount;
 	int m_tileSize;
 	bool m_abortingReplies;
 
@@ -82,4 +88,7 @@ private:
 
 	std::unordered_map<QString, QNetworkReply*> m_replyMap;
 	std::unordered_map<QString, std::unique_ptr<QImage>> m_tileMap;
+
+public:
+	static constexpr const char* INVALID_TILE_SERVER = "invalid_tile_server";
 };

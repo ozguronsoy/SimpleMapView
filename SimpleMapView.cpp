@@ -17,10 +17,12 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_networkManager(this),
 	m_tileSize(256),
 	m_abortingReplies(false),
-	m_zoomEnabled(true),
-	m_mapMoveEnabled(true)
+	m_lockZoom(false),
+	m_lockGeolocation(false),
+	m_disableMouseWheelZoom(false),
+	m_disableMouseMoveMap(false)
 {
-	this->setTileServer("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga");
+	this->setTileServer("https://a.tile.openstreetmap.org/{z}/{x}/{y}.png");
 }
 
 void SimpleMapView::resize(int w, int h)
@@ -40,6 +42,7 @@ void SimpleMapView::setMinZoomLevel(int minZoomLevel)
 	assert((void("minZoomLevel cannot be greater than m_maxZoomLevel"), minZoomLevel <= m_maxZoomLevel));
 
 	m_minZoomLevel = minZoomLevel;
+	this->setZoomLevel(m_zoomLevel);
 }
 
 int SimpleMapView::maxZoomLevel() const
@@ -53,6 +56,7 @@ void SimpleMapView::setMaxZoomLevel(int maxZoomLevel)
 	assert((void("maxZoomLevel cannot be less than m_minZoomLevel"), maxZoomLevel >= m_minZoomLevel));
 
 	m_maxZoomLevel = maxZoomLevel;
+	this->setZoomLevel(m_zoomLevel);
 }
 
 int SimpleMapView::zoomLevel() const
@@ -62,7 +66,7 @@ int SimpleMapView::zoomLevel() const
 
 void SimpleMapView::setZoomLevel(int zoomLevel)
 {
-	if (!this->isEnabled() || !this->isZoomEnabled()) return;
+	if (!this->isEnabled() || m_lockZoom) return;
 
 	const int oldZoomLevel = m_zoomLevel;
 	m_zoomLevel = std::min(std::max(zoomLevel, m_minZoomLevel), m_maxZoomLevel);
@@ -110,7 +114,7 @@ void SimpleMapView::setCenter(const QGeoCoordinate& center)
 
 void SimpleMapView::setCenter(double latitude, double longitude)
 {
-	if (!this->isEnabled() || !this->isMapMoveEnabled()) return;
+	if (!this->isEnabled() || m_lockGeolocation) return;
 
 	assert((void("latitude must be between -90 to 90 inclusive"), (latitude >= -90) && (latitude <= 90)));
 	assert((void("longitude must be between -180 to 180 inclusive"), (longitude >= -180) && (longitude <= 180)));
@@ -144,9 +148,12 @@ void SimpleMapView::setTileServer(const QString& tileServer)
 {
 	if (tileServer == m_tileServer) return;
 
+	this->abortReplies();
+	m_tileMap.clear();
 	m_tileServer = tileServer;
 
 	QNetworkRequest request(this->getTileServerUrl(QPoint(0, 0), 0));
+	request.setRawHeader("User-Agent", "Qt/SimpleMapView");
 	request.setTransferTimeout(5000);
 
 	QNetworkReply* reply = m_networkManager.get(request);
@@ -173,29 +180,67 @@ void SimpleMapView::setTileServer(const QString& tileServer)
 
 	reply->deleteLater();
 
-	this->abortReplies();
-	m_tileMap.clear();
 	this->updateMap();
 }
 
-bool SimpleMapView::isZoomEnabled() const
+bool SimpleMapView::isZoomLocked() const
 {
-	return m_zoomEnabled;
+	return m_lockZoom;
 }
 
-void SimpleMapView::setZoomEnabled(bool enabled)
+void SimpleMapView::lockZoom()
 {
-	m_zoomEnabled = enabled;
+	m_lockZoom = true;
 }
 
-bool SimpleMapView::isMapMoveEnabled() const
+void SimpleMapView::unlockZoom()
 {
-	return m_mapMoveEnabled;
+	m_lockZoom = false;
 }
 
-void SimpleMapView::setMapMoveEnabled(bool enabled)
+bool SimpleMapView::isGeolocationLocked() const
 {
-	m_mapMoveEnabled = enabled;
+	return m_lockGeolocation;
+}
+
+void SimpleMapView::lockGeolocation()
+{
+	m_lockGeolocation = true;
+}
+
+void SimpleMapView::unlockGeolocation()
+{
+	m_lockGeolocation = false;
+}
+
+bool SimpleMapView::isMouseWheelZoomEnabled() const 
+{
+	return m_disableMouseWheelZoom;
+}
+
+void SimpleMapView::enableMouseWheelZoom() 
+{
+	m_disableMouseWheelZoom = false;
+}
+
+void SimpleMapView::disableMouseWheelZoom() 
+{
+	m_disableMouseWheelZoom = true;
+}
+
+bool SimpleMapView::isMouseMoveMapEnabled() const
+{
+	return m_disableMouseMoveMap;
+}
+
+void SimpleMapView::enableMouseMoveMap()
+{
+	m_disableMouseMoveMap = false;
+}
+
+void SimpleMapView::disableMouseMoveMap()
+{
+	m_disableMouseMoveMap = true;
 }
 
 QPoint SimpleMapView::calcRequiredTileCount() const
@@ -294,7 +339,10 @@ void SimpleMapView::fetchTile(const QPoint& tilePosition)
 {
 	if (m_tileServer == SimpleMapView::INVALID_TILE_SERVER) return;
 
-	const QNetworkRequest request(this->getTileServerUrl(tilePosition, m_zoomLevel));
+	QNetworkRequest request(this->getTileServerUrl(tilePosition, m_zoomLevel));
+	request.setRawHeader("User-Agent", "Qt/SimpleMapView");
+	request.setTransferTimeout(5000);
+
 	const QString tileKey = this->getTileKey(tilePosition);
 	QNetworkReply* reply = m_networkManager.get(request);
 	m_replyMap[tileKey] = reply;
@@ -382,13 +430,13 @@ void SimpleMapView::paintEvent(QPaintEvent* event)
 
 void SimpleMapView::wheelEvent(QWheelEvent* event)
 {
+	if (!this->isEnabled() || m_disableMouseWheelZoom || m_lockZoom) return;
+
 	const int angleDelta = event->angleDelta().y();
 	if (angleDelta > 0)
 		this->setZoomLevel(this->zoomLevel() + 1);
 	else if (angleDelta < 0)
 		this->setZoomLevel(this->zoomLevel() - 1);
-
-	QWidget::wheelEvent(event);
 }
 
 void SimpleMapView::mousePressEvent(QMouseEvent* event)
@@ -397,12 +445,12 @@ void SimpleMapView::mousePressEvent(QMouseEvent* event)
 	{
 		m_lastMousePosition = event->pos();
 	}
-
-	QWidget::mousePressEvent(event);
 }
 
 void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 {
+	if (!this->isEnabled() || m_disableMouseMoveMap || m_lockGeolocation) return;
+
 	if (event->buttons() & Qt::LeftButton)
 	{
 		constexpr double latitudeSpeed = 180.0 / 167.0;
@@ -418,6 +466,4 @@ void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 
 		m_lastMousePosition = currentMousePosition;
 	}
-
-	QWidget::mouseMoveEvent(event);
 }

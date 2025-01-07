@@ -39,11 +39,21 @@ public:
 	const QString& tileServer() const;
 	void setTileServer(const QString& tileServer);
 
-	bool isZoomEnabled() const;
-	void setZoomEnabled(bool enabled);
+	bool isZoomLocked() const;
+	void lockZoom();
+	void unlockZoom();
 
-	bool isMapMoveEnabled() const;
-	void setMapMoveEnabled(bool enabled);
+	bool isGeolocationLocked() const;
+	void lockGeolocation();
+	void unlockGeolocation();
+
+	bool isMouseWheelZoomEnabled() const;
+	void enableMouseWheelZoom();
+	void disableMouseWheelZoom();
+
+	bool isMouseMoveMapEnabled() const;
+	void enableMouseMoveMap();
+	void disableMouseMoveMap();
 
 protected:
 	QPoint calcRequiredTileCount() const;
@@ -81,8 +91,10 @@ private:
 	int m_tileSize;
 	bool m_abortingReplies;
 
-	bool m_zoomEnabled;
-	bool m_mapMoveEnabled;
+	bool m_lockZoom;
+	bool m_lockGeolocation;
+	bool m_disableMouseWheelZoom;
+	bool m_disableMouseMoveMap;
 
 	QPoint m_lastMousePosition;
 

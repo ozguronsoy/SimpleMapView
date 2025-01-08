@@ -78,6 +78,11 @@ protected:
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 
+public:
+	static QPointF geoCoordinateToTilePosition(double latitude, double longitude, int zoomLevel);
+	static QPointF geoCoordinateToTilePosition(const QGeoCoordinate& geoCoordinate, int zoomLevel);
+	static QGeoCoordinate tilePositionToGeoCoordinate(const QPointF& tilePosition, int zoomLevel);
+
 private:
 	int m_zoomLevel;
 	int m_minZoomLevel;

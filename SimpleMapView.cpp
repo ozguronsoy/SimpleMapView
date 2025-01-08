@@ -213,17 +213,17 @@ void SimpleMapView::unlockGeolocation()
 	m_lockGeolocation = false;
 }
 
-bool SimpleMapView::isMouseWheelZoomEnabled() const 
+bool SimpleMapView::isMouseWheelZoomEnabled() const
 {
 	return m_disableMouseWheelZoom;
 }
 
-void SimpleMapView::enableMouseWheelZoom() 
+void SimpleMapView::enableMouseWheelZoom()
 {
 	m_disableMouseWheelZoom = false;
 }
 
-void SimpleMapView::disableMouseWheelZoom() 
+void SimpleMapView::disableMouseWheelZoom()
 {
 	m_disableMouseWheelZoom = true;
 }
@@ -245,18 +245,15 @@ void SimpleMapView::disableMouseMoveMap()
 
 QPoint SimpleMapView::calcRequiredTileCount() const
 {
-	const int x = std::ceil(((double)this->width()) / m_tileSize);
-	const int y = std::ceil(((double)this->height()) / m_tileSize);
+	const int x = ceil(((double)this->width()) / m_tileSize);
+	const int y = ceil(((double)this->height()) / m_tileSize);
 
 	return QPoint(x, y);
 }
 
 QPointF SimpleMapView::calcCenterTilePosition() const
 {
-	const double x = ((this->longitude() + 180.0) / (360.0)) * m_tileCountPerAxis;
-	const double y = (1.0 - (std::log(std::tan(M_PI_4 + (this->latitude() * M_PI / 360.0))) / M_PI)) * 0.5 * m_tileCountPerAxis;
-
-	return QPointF(x, y);
+	return SimpleMapView::geoCoordinateToTilePosition(m_center, m_zoomLevel);
 }
 
 QPointF SimpleMapView::calcTileScreenPosition(const QString& tileKey) const
@@ -453,17 +450,44 @@ void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 
 	if (event->buttons() & Qt::LeftButton)
 	{
-		constexpr double latitudeSpeed = 180.0 / 167.0;
-		constexpr double longitudeSpeed = 360.0 / 256.0;
-
+		const QPointF centerTilePosition = this->calcCenterTilePosition();
 		const QPoint currentMousePosition = event->pos();
 		const QPoint deltaMousePosition = currentMousePosition - m_lastMousePosition;
 
-		const double newLatitude = this->latitude() + deltaMousePosition.y() * latitudeSpeed / m_tileCountPerAxis;
-		const double newLongitude = this->longitude() - deltaMousePosition.x() * longitudeSpeed / m_tileCountPerAxis;
+		// 1.0 / (dx/dlongitude)
+		const double deltaLongitude = 360.0 / m_tileCountPerAxis;
+		
+		// 1.0 / (dy/dlatitude)
+		const double deltaLatitude = -(360.0 / m_tileCountPerAxis) * cos(qDegreesToRadians(this->latitude()));
 
-		this->setCenter(newLatitude, newLongitude);
+		this->setCenter(
+			(this->latitude() - (deltaMousePosition.y() * (deltaLatitude / m_tileSize))),
+			(this->longitude() - (deltaMousePosition.x() * (deltaLongitude / m_tileSize)))
+		);
 
 		m_lastMousePosition = currentMousePosition;
 	}
+}
+
+QPointF SimpleMapView::geoCoordinateToTilePosition(double latitude, double longitude, int zoomLevel)
+{
+	const int tileCountPerAxis = (1 << zoomLevel);
+	const double x = ((longitude + 180.0) / (360.0)) * tileCountPerAxis;
+	const double y = ((1.0 - (log(tan(M_PI_4 + (qDegreesToRadians(latitude) / 2.0))) / M_PI)) / 2.0) * tileCountPerAxis;
+
+	return QPointF(x, y);
+}
+
+QPointF SimpleMapView::geoCoordinateToTilePosition(const QGeoCoordinate& geoCoordinate, int zoomLevel)
+{
+	return SimpleMapView::geoCoordinateToTilePosition(geoCoordinate.latitude(), geoCoordinate.longitude(), zoomLevel);
+}
+
+QGeoCoordinate SimpleMapView::tilePositionToGeoCoordinate(const QPointF& tilePosition, int zoomLevel)
+{
+	const int tileCountPerAxis = (1 << zoomLevel);
+	const double longitude = tilePosition.x() * (360.0 / tileCountPerAxis) - 180.0;
+	const double latitude = qRadiansToDegrees(2.0 * (atan(exp(-(tilePosition.y() * (2.0 / tileCountPerAxis) - 1) * M_PI)) - M_PI_4));
+
+	return QGeoCoordinate(latitude, longitude);
 }

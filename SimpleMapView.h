@@ -57,9 +57,17 @@ public:
 
 protected:
 	QPoint calcRequiredTileCount() const;
-	QPointF calcCenterTilePosition() const;
-	QPointF calcTileScreenPosition(const QString& tileKey) const;
-	QPointF calcTileScreenPosition(const QPoint& tilePosition) const;
+
+	QPointF geoCoordinateToTilePosition(double latitude, double longitude) const;
+	QPointF geoCoordinateToTilePosition(const QGeoCoordinate& geoCoordinate) const;
+	QPointF geoCoordinateToScreenPosition(double latitude, double longitude) const;
+	QPointF geoCoordinateToScreenPosition(const QGeoCoordinate& geoCoordinate) const;
+
+	QGeoCoordinate tilePositionToGeoCoordinate(const QPointF& tilePosition) const;
+	QPointF tilePositionToScreenPosition(const QPointF& tilePosition) const;
+
+	QPointF screenPositionToTilePosition(const QPointF& screenPosition) const;
+	QGeoCoordinate screenPositionToGeoCoordinate(const QPointF& screenPosition) const;
 
 	bool validateTilePosition(const QPoint& tilePosition) const;
 
@@ -77,11 +85,6 @@ protected:
 	virtual void wheelEvent(QWheelEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
-
-public:
-	static QPointF geoCoordinateToTilePosition(double latitude, double longitude, int zoomLevel);
-	static QPointF geoCoordinateToTilePosition(const QGeoCoordinate& geoCoordinate, int zoomLevel);
-	static QGeoCoordinate tilePositionToGeoCoordinate(const QPointF& tilePosition, int zoomLevel);
 
 private:
 	int m_zoomLevel;

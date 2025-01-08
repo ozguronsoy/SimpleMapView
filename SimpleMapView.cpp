@@ -251,26 +251,61 @@ QPoint SimpleMapView::calcRequiredTileCount() const
 	return QPoint(x, y);
 }
 
-QPointF SimpleMapView::calcCenterTilePosition() const
+QPointF SimpleMapView::geoCoordinateToTilePosition(double latitude, double longitude) const
 {
-	return SimpleMapView::geoCoordinateToTilePosition(m_center, m_zoomLevel);
-}
-
-QPointF SimpleMapView::calcTileScreenPosition(const QString& tileKey) const
-{
-	return this->calcTileScreenPosition(this->getTilePosition(tileKey));
-}
-
-QPointF SimpleMapView::calcTileScreenPosition(const QPoint& tilePosition) const
-{
-	const QPointF relativeTilePosition = tilePosition - this->calcCenterTilePosition();
-	const double w_2 = this->width() / 2.0;
-	const double h_2 = this->height() / 2.0;
-
-	const double x = w_2 + (relativeTilePosition.x() * m_tileSize);
-	const double y = h_2 + (relativeTilePosition.y() * m_tileSize);
+	const double x = ((longitude + 180.0) / (360.0)) * m_tileCountPerAxis;
+	const double y = ((1.0 - (log(tan(M_PI_4 + (qDegreesToRadians(latitude) / 2.0))) / M_PI)) / 2.0) * m_tileCountPerAxis;
 
 	return QPointF(x, y);
+}
+
+QPointF SimpleMapView::geoCoordinateToTilePosition(const QGeoCoordinate& geoCoordinate) const
+{
+	return this->geoCoordinateToTilePosition(geoCoordinate.latitude(), geoCoordinate.longitude());
+}
+
+QPointF SimpleMapView::geoCoordinateToScreenPosition(double latitude, double longitude) const
+{
+	return this->tilePositionToScreenPosition(this->geoCoordinateToTilePosition(latitude, longitude));
+}
+
+QPointF SimpleMapView::geoCoordinateToScreenPosition(const QGeoCoordinate& geoCoordinate) const
+{
+	return this->geoCoordinateToScreenPosition(geoCoordinate.latitude(), geoCoordinate.longitude());
+}
+
+QGeoCoordinate SimpleMapView::tilePositionToGeoCoordinate(const QPointF& tilePosition) const
+{
+	const int tileCountPerAxis = (1 << m_zoomLevel);
+	const double longitude = tilePosition.x() * (360.0 / tileCountPerAxis) - 180.0;
+	const double latitude = qRadiansToDegrees(2.0 * (atan(exp(-(tilePosition.y() * (2.0 / tileCountPerAxis) - 1) * M_PI)) - M_PI_4));
+
+	return QGeoCoordinate(latitude, longitude);
+}
+
+QPointF SimpleMapView::tilePositionToScreenPosition(const QPointF& tilePosition) const
+{
+	const QPointF relativeTilePosition = tilePosition - this->geoCoordinateToTilePosition(m_center);
+
+	const double x = (this->width() / 2.0) + (relativeTilePosition.x() * m_tileSize);
+	const double y = (this->height() / 2.0) + (relativeTilePosition.y() * m_tileSize);
+
+	return QPointF(x, y);
+}
+
+QPointF SimpleMapView::screenPositionToTilePosition(const QPointF& screenPosition) const
+{
+	const QPointF centerTilePosition = this->geoCoordinateToTilePosition(m_center);
+
+	const double x = (m_tileSize * (screenPosition.x() - (this->width() / 2.0))) + centerTilePosition.x();
+	const double y = (m_tileSize * (screenPosition.y() - (this->height() / 2.0))) + centerTilePosition.y();
+
+	return QPointF(x, y);
+}
+
+QGeoCoordinate SimpleMapView::screenPositionToGeoCoordinate(const QPointF& screenPosition) const
+{
+	return this->tilePositionToGeoCoordinate(this->screenPositionToTilePosition(screenPosition));
 }
 
 bool SimpleMapView::validateTilePosition(const QPoint& tilePosition) const
@@ -305,7 +340,7 @@ void SimpleMapView::updateMap()
 	if (m_tileServer == SimpleMapView::INVALID_TILE_SERVER) return;
 
 	const QPoint requiredTileCount = this->calcRequiredTileCount();
-	const QPointF centerTilePosition = this->calcCenterTilePosition();
+	const QPointF centerTilePosition = this->geoCoordinateToTilePosition(m_center);
 
 	const int x_start = (-requiredTileCount.x() / 2) - 1;
 	const int x_end = (requiredTileCount.x() / 2) + 1;
@@ -399,8 +434,8 @@ std::vector<QString> SimpleMapView::getTilesToRender() const
 
 	for (const auto& tile : m_tileMap)
 	{
-		const QPointF tilePosition = this->calcTileScreenPosition(tile.first);
-		const QRectF tileRect(tilePosition, QSizeF(m_tileSize, m_tileSize));
+		const QPointF screenPosition = this->tilePositionToScreenPosition(this->getTilePosition(tile.first));
+		const QRectF tileRect(screenPosition, QSizeF(m_tileSize, m_tileSize));
 
 		if (tileRect.intersects(renderRect))
 		{
@@ -418,8 +453,8 @@ void SimpleMapView::paintEvent(QPaintEvent* event)
 
 	for (const auto& tileKey : this->getTilesToRender())
 	{
-		const QPointF tileScreenPosition = this->calcTileScreenPosition(tileKey);
-		paint.drawImage(tileScreenPosition.x(), tileScreenPosition.y(), *m_tileMap[tileKey]);
+		const QPointF screenPosition = this->tilePositionToScreenPosition(this->getTilePosition(tileKey));
+		paint.drawImage(screenPosition.x(), screenPosition.y(), *m_tileMap[tileKey]);
 	}
 
 	QWidget::paintEvent(event);
@@ -450,13 +485,13 @@ void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 
 	if (event->buttons() & Qt::LeftButton)
 	{
-		const QPointF centerTilePosition = this->calcCenterTilePosition();
+		const QPointF centerTilePosition = this->geoCoordinateToTilePosition(m_center);
 		const QPoint currentMousePosition = event->pos();
 		const QPoint deltaMousePosition = currentMousePosition - m_lastMousePosition;
 
 		// 1.0 / (dx/dlongitude)
 		const double deltaLongitude = 360.0 / m_tileCountPerAxis;
-		
+
 		// 1.0 / (dy/dlatitude)
 		const double deltaLatitude = -(360.0 / m_tileCountPerAxis) * cos(qDegreesToRadians(this->latitude()));
 
@@ -467,27 +502,4 @@ void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 
 		m_lastMousePosition = currentMousePosition;
 	}
-}
-
-QPointF SimpleMapView::geoCoordinateToTilePosition(double latitude, double longitude, int zoomLevel)
-{
-	const int tileCountPerAxis = (1 << zoomLevel);
-	const double x = ((longitude + 180.0) / (360.0)) * tileCountPerAxis;
-	const double y = ((1.0 - (log(tan(M_PI_4 + (qDegreesToRadians(latitude) / 2.0))) / M_PI)) / 2.0) * tileCountPerAxis;
-
-	return QPointF(x, y);
-}
-
-QPointF SimpleMapView::geoCoordinateToTilePosition(const QGeoCoordinate& geoCoordinate, int zoomLevel)
-{
-	return SimpleMapView::geoCoordinateToTilePosition(geoCoordinate.latitude(), geoCoordinate.longitude(), zoomLevel);
-}
-
-QGeoCoordinate SimpleMapView::tilePositionToGeoCoordinate(const QPointF& tilePosition, int zoomLevel)
-{
-	const int tileCountPerAxis = (1 << zoomLevel);
-	const double longitude = tilePosition.x() * (360.0 / tileCountPerAxis) - 180.0;
-	const double latitude = qRadiansToDegrees(2.0 * (atan(exp(-(tilePosition.y() * (2.0 / tileCountPerAxis) - 1) * M_PI)) - M_PI_4));
-
-	return QGeoCoordinate(latitude, longitude);
 }

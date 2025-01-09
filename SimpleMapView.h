@@ -1,6 +1,7 @@
 #include <unordered_map>
 #include <memory>
 #include <vector>
+#include <array>
 #include <QWidget>
 #include <QGeoCoordinate>
 #include <QNetworkAccessManager>
@@ -91,6 +92,11 @@ protected:
 	virtual void wheelEvent(QWheelEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
+
+private:
+	QPainterPath calcPaintClipRegion() const;
+	std::array<int, 4> extractBorderRadiiFromStyleSheet() const; // top-left, top-right, bottom-right, bottom-left
+	QPen extractBorderPenFromStyleSheet() const;
 
 private:
 	int m_zoomLevel;

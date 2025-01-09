@@ -1,8 +1,10 @@
 #include "SimpleMapView.h"
 #include <algorithm>
 #include <cmath>
-#include <QEventLoop>
+#include <QRegularExpression>
 #include <QPainter>
+#include <QPainterPath>
+#include <QColor>
 #include <QWheelEvent>
 #include <QDebug>
 
@@ -455,6 +457,13 @@ std::vector<QString> SimpleMapView::getTilesToRender() const
 void SimpleMapView::paintEvent(QPaintEvent* event)
 {
 	QPainter paint(this);
+	paint.setRenderHint(QPainter::Antialiasing);
+	paint.setRenderHint(QPainter::LosslessImageRendering);
+
+	const QPainterPath painterPath = this->calcPaintClipRegion();
+	paint.setClipPath(painterPath);
+
+	// fill background
 	paint.fillRect(event->region().boundingRect(), paint.background());
 
 	for (const auto& tileKey : this->getTilesToRender())
@@ -463,7 +472,9 @@ void SimpleMapView::paintEvent(QPaintEvent* event)
 		paint.drawImage(screenPosition.x(), screenPosition.y(), *m_tileMap[tileKey]);
 	}
 
-	QWidget::paintEvent(event);
+	// draw border
+	paint.setPen(this->extractBorderPenFromStyleSheet());
+	paint.drawPath(painterPath);
 }
 
 void SimpleMapView::wheelEvent(QWheelEvent* event)
@@ -508,4 +519,208 @@ void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 
 		m_lastMousePosition = currentMousePosition;
 	}
+}
+
+QPainterPath SimpleMapView::calcPaintClipRegion() const
+{
+	const std::array<int, 4> radii = this->extractBorderRadiiFromStyleSheet();
+	const int topLeftRadius = radii[0];
+	const int topRightRadius = radii[1];
+	const int bottomRightRadius = radii[2];
+	const int bottomLeftRadius = radii[3];
+
+	QPainterPath painterPath;
+
+	painterPath.moveTo(topLeftRadius, 0);
+	painterPath.lineTo(width() - topRightRadius, 0);
+
+	painterPath.quadTo(width(), 0, width(), topRightRadius);
+	painterPath.lineTo(width(), height() - bottomRightRadius);
+
+	painterPath.quadTo(width(), height(), width() - bottomRightRadius, height());
+	painterPath.lineTo(bottomLeftRadius, height());
+
+	painterPath.quadTo(0, height(), 0, height() - bottomLeftRadius);
+	painterPath.lineTo(0, topLeftRadius);
+
+	painterPath.quadTo(0, 0, topLeftRadius, 0);
+
+	painterPath.closeSubpath();
+
+	return painterPath;
+}
+
+std::array<int, 4> SimpleMapView::extractBorderRadiiFromStyleSheet() const
+{
+	std::array<int, 4> radii = { 0, 0, 0, 0 };
+	QString styleSheet = this->styleSheet();
+	QRegularExpression radiiRegex("(border-radius|border-top-left-radius|border-top-right-radius|border-bottom-right-radius|border-bottom-left-radius)\\s*:\\s*([^;]+);");
+
+	// search to extract border radius values
+	QRegularExpressionMatchIterator matchIterator = radiiRegex.globalMatch(styleSheet);
+
+	// if radius of a corner is explicitly set (e.g. border-top-left-radius)
+	// use it, if not use the "border-radius" parameter
+	std::array<bool, 4> isRadiiSet = { false, false, false, false };
+
+	while (matchIterator.hasNext())
+	{
+		QRegularExpressionMatch match = matchIterator.next();
+		QString property = match.captured(1);
+		int value = match.captured(2).remove("px").toInt();
+
+		if (property == "border-radius")
+		{
+			if (!isRadiiSet[0]) radii[0] = value;
+			if (!isRadiiSet[1]) radii[1] = value;
+			if (!isRadiiSet[2]) radii[2] = value;
+			if (!isRadiiSet[3]) radii[3] = value;
+		}
+		else if (property == "border-top-left-radius")
+		{
+			radii[0] = value;
+			isRadiiSet[0] = true;
+		}
+		else if (property == "border-top-right-radius")
+		{
+			radii[1] = value;
+			isRadiiSet[1] = true;
+		}
+		else if (property == "border-bottom-right-radius")
+		{
+			radii[2] = value;
+			isRadiiSet[2] = true;
+		}
+		else if (property == "border-bottom-left-radius")
+		{
+			radii[3] = value;
+			isRadiiSet[3] = true;
+		}
+	}
+
+	return radii;
+}
+
+QPen SimpleMapView::extractBorderPenFromStyleSheet() const
+{
+	QPen pen(Qt::transparent);
+	QString styleSheet = this->styleSheet();
+	QRegularExpression borderColorRegex("(border|border-color)\\s*:\\s*([^;]+);");
+	QRegularExpression borderWidthRegex("(border|border-width)\\s*:\\s*([^;]+);");
+	QRegularExpression borderStyleRegex("(border|border-style)\\s*:\\s*([^;]+);");
+
+	// get color
+	QRegularExpressionMatchIterator matchIterator = borderColorRegex.globalMatch(styleSheet);
+	while (matchIterator.hasNext())
+	{
+		QRegularExpressionMatch match = matchIterator.next();
+		QString property = match.captured(1);
+		QString value = match.captured(2);
+
+		if (property == "border")
+		{
+			for (const QString s : value.split(" "))
+			{
+				const QColor c = QColor::fromString(s);
+				if (c.isValid())
+				{
+					pen.setColor(c);
+					break;
+				}
+			}
+		}
+		else if (property == "border-color")
+		{
+			const QColor c = QColor::fromString(value);
+			if (c.isValid())
+			{
+				pen.setColor(c);
+				break;
+			}
+		}
+	}
+
+	// get width
+	matchIterator = borderWidthRegex.globalMatch(styleSheet);
+	while (matchIterator.hasNext())
+	{
+		QRegularExpressionMatch match = matchIterator.next();
+		QString property = match.captured(1);
+		QString value = match.captured(2).remove("px");
+
+		if (property == "border")
+		{
+			for (const QString s : value.split(" "))
+			{
+				bool ok = false;
+				const int bw = s.toInt(&ok);
+				if (ok)
+				{
+					pen.setWidth(bw);
+					break;
+				}
+			}
+		}
+		else if (property == "border-width")
+		{
+			bool ok = false;
+			const int bw = value.toInt(&ok);
+			if (ok)
+			{
+				pen.setWidth(bw);
+				break;
+			}
+		}
+	}
+
+	// get style
+	matchIterator = borderStyleRegex.globalMatch(styleSheet);
+	while (matchIterator.hasNext())
+	{
+		QRegularExpressionMatch match = matchIterator.next();
+		QString property = match.captured(1);
+		QString value = match.captured(2);
+
+		if (property == "border")
+		{
+			for (const QString s : value.split(" "))
+			{
+				if (s == "solid" || s == "none")
+				{
+					pen.setStyle(Qt::PenStyle::SolidLine);
+					break;
+				}
+				else if (s == "dash")
+				{
+					pen.setStyle(Qt::PenStyle::DashLine);
+					break;
+				}
+				else if (s == "dot")
+				{
+					pen.setStyle(Qt::PenStyle::DotLine);
+					break;
+				}
+			}
+		}
+		else if (property == "border-style")
+		{
+			if (value == "solid" || value == "none")
+			{
+				pen.setStyle(Qt::PenStyle::SolidLine);
+				break;
+			}
+			else if (value == "dash")
+			{
+				pen.setStyle(Qt::PenStyle::DashLine);
+				break;
+			}
+			else if (value == "dot")
+			{
+				pen.setStyle(Qt::PenStyle::DotLine);
+				break;
+			}
+		}
+	}
+
+	return pen;
 }

@@ -79,6 +79,8 @@ void SimpleMapView::setZoomLevel(int zoomLevel)
 		m_tileMap.clear();
 
 		this->updateMap();
+
+		emit this->zoomLevelChanged();
 	}
 }
 
@@ -136,6 +138,8 @@ void SimpleMapView::setCenter(double latitude, double longitude)
 	if (isChanged)
 	{
 		this->updateMap();
+
+		emit this->centerChanged();
 	}
 }
 
@@ -181,6 +185,8 @@ void SimpleMapView::setTileServer(const QString& tileServer)
 	reply->deleteLater();
 
 	this->updateMap();
+
+	emit this->tileServerChanged();
 }
 
 bool SimpleMapView::isZoomLocked() const

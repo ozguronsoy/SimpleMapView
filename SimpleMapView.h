@@ -15,6 +15,7 @@ public:
 	explicit SimpleMapView(QWidget* parent = nullptr);
 	~SimpleMapView() = default;
 
+public slots:
 	void resize(int w, int h);
 
 	int minZoomLevel() const;
@@ -54,6 +55,11 @@ public:
 	bool isMouseMoveMapEnabled() const;
 	void enableMouseMoveMap();
 	void disableMouseMoveMap();
+
+signals:
+	void zoomLevelChanged();
+	void centerChanged();
+	void tileServerChanged();
 
 protected:
 	QPoint calcRequiredTileCount() const;

@@ -2,11 +2,31 @@
 
 A Qt widget for rendering tile maps.
 
+- [Setup](#setup)
 - [Create Widget](#create-widget)
 - [Change Tile Server](#change-tile-server)
 - [Limit Zoom](#limit-zoom)
 - [Lock Zoom and Geolocation]()
 - [Disable Mouse Events](#disable-mouse-events)
+
+### Setup
+
+after including the ``.h`` and ``.cpp`` files, add the ``Positioning`` and ``Network`` modules to the build system.
+
+cmake:
+```
+find_package(Qt6 REQUIRED COMPONENTS Network)
+target_link_libraries(mytarget PRIVATE Qt6::Network)
+
+find_package(Qt6 REQUIRED COMPONENTS Positioning)
+target_link_libraries(mytarget PRIVATE Qt6::Positioning)
+```
+
+qmake
+```
+QT += network
+QT += positioning
+```
 
 ### Create Widget
 

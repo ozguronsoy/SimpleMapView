@@ -103,7 +103,7 @@ mapView->enableMouseMoveMap();
 
 ## Markers
 
-> ![IMPORTANT]
+> [!IMPORTANT]
 > markers are managed by the map widget and will be destroyed automatically.
 
 ### Add

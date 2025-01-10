@@ -16,7 +16,7 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_maxZoomLevel(21),
 	m_zoomLevel(17),
 	m_tileCountPerAxis(1 << m_zoomLevel),
-	m_tileServer(SimpleMapView::INVALID_TILE_SERVER),
+	m_tileServer(SimpleMapView::TileServers::INVALID),
 	m_center(39.912341799204775, 32.851170267919244),
 	m_networkManager(this),
 	m_tileSize(256),
@@ -26,7 +26,7 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_disableMouseWheelZoom(false),
 	m_disableMouseMoveMap(false)
 {
-	this->setTileServer("https://a.tile.openstreetmap.org/{z}/{x}/{y}.png");
+	this->setTileServer(SimpleMapView::TileServers::OSM);
 }
 
 void SimpleMapView::resize(int w, int h)
@@ -177,7 +177,7 @@ void SimpleMapView::setTileServer(const QString& tileServer)
 	{
 		qDebug() << "[SimpleMapView]" << reply->errorString();
 		qDebug() << "[SimpleMapView]" << "failed to set the tile server to" << m_tileServer;
-		m_tileServer = SimpleMapView::INVALID_TILE_SERVER;
+		m_tileServer = SimpleMapView::TileServers::INVALID;
 	}
 
 	reply->deleteLater();
@@ -395,7 +395,7 @@ QUrl SimpleMapView::getTileServerUrl(const QPoint& tilePosition, int zoomLevel) 
 
 void SimpleMapView::updateMap()
 {
-	if (m_tileServer == SimpleMapView::INVALID_TILE_SERVER) return;
+	if (m_tileServer == SimpleMapView::TileServers::INVALID) return;
 
 	const QPoint requiredTileCount = this->calcRequiredTileCount();
 	const QPointF centerTilePosition = this->geoCoordinateToTilePosition(m_center);
@@ -427,7 +427,7 @@ void SimpleMapView::updateMap()
 
 void SimpleMapView::fetchTile(const QPoint& tilePosition)
 {
-	if (m_tileServer == SimpleMapView::INVALID_TILE_SERVER) return;
+	if (m_tileServer == SimpleMapView::TileServers::INVALID) return;
 
 	QNetworkRequest request(this->getTileServerUrl(tilePosition, m_zoomLevel));
 	request.setRawHeader("User-Agent", "Qt/SimpleMapView");

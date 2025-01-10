@@ -130,8 +130,29 @@ private:
 
 	std::unordered_map<QString, QNetworkReply*> m_replyMap;
 	std::unordered_map<QString, std::unique_ptr<QImage>> m_tileMap;
+
 public:
-	static constexpr const char* INVALID_TILE_SERVER = "invalid_tile_server";
+	class TileServers
+	{
+	public:
+		TileServers() = delete;
+		TileServers(const TileServers&) = delete;
+		TileServers& operator=(const TileServers&) = delete;
+
+		static constexpr const char* INVALID = "tile_server_invalid";
+		static constexpr const char* OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+		static constexpr const char* OPENTOPOMAP = "https://tile.opentopomap.org/{z}/{x}/{y}.png";
+		static constexpr const char* GOOGLE_MAP = "https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga";
+		static constexpr const char* GOOGLE_SAT = "https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga";
+		static constexpr const char* GOOGLE_LAND = "https://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}&s=Ga";
+		static constexpr const char* CARTODB_POSITRON = "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png";
+		static constexpr const char* CARTODB_DARK_MATTER = "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png";
+		static constexpr const char* THUNDERFOREST_TRANSPORT = "https://tile.thunderforest.com/transport/{z}/{x}/{y}.png";
+		static constexpr const char* THUNDERFOREST_LANDSCAPE = "https://tile.thunderforest.com/landscape/{z}/{x}/{y}.png";
+		static constexpr const char* THUNDERFOREST_OUTDOORS = "https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png";
+		static constexpr const char* ESRI_WORLD_STREET_MAP = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
+		static constexpr const char* ESRI_WORLD_IMAGERY = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+	};
 };
 
 #endif

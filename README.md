@@ -60,14 +60,12 @@ mapView->setZoomLevel(9);
 
 ### Change Tile Server
 
-You can use any tile server that contains ``{x}``, ``{y}``, and ``{z}`` coordinates in the URL.
+you can use any tile server that contains ``{x}``, ``{y}``, and ``{z}`` coordinates in the URL.
 
 ```c++
-// google maps
-mapView->setTileServer("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga");
-
-// google satellite
-mapView->setTileServer("https://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}&s=Ga");
+mapView->setTileServer(SimpleMapView::TileServers::GOOGLE_MAP);
+mapView->setTileServer(SimpleMapView::TileServers::GOOGLE_SAT);
+mapView->setTileServer("https://a.tile.maptiler.com/{z}/{x}/{y}.png?key=YOUR_API_KEY");
 ``` 
 ![satellite_map](readme_images/map_satellite.png)
 

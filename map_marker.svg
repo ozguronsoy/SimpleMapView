@@ -1,0 +1,3 @@
+<svg width="512" height="512" viewBox="0 0 512 512">
+  <path fill="red" fill-rule="evenodd" stroke="red" stroke-width="16" d="M256 16C160 16 96 112 96 192c0 108 160 288 160 288s160-180 160-288c0-80-64-176-160-176 M256 136a56 56 0 1 0 0 112a56 56 0 1 0 0-112z "/>
+</svg>

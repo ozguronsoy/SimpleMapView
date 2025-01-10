@@ -3,23 +3,26 @@
 A Qt widget for rendering tile maps.
 
 - [Setup](#setup)
-- [Create Widget](#create-widget)
-- [Change Tile Server](#change-tile-server)
-- [Limit Zoom](#limit-zoom)
-- [Lock Zoom and Geolocation]()
-- [Disable Mouse Events](#disable-mouse-events)
+- [Map Widget](#map-widget)
+    - [Create](#create)
+    - [Change Tile Server](#change-tile-server)
+    - [Limit Zoom](#limit-zoom)
+    - [Lock Zoom and Geolocation](#lock-zoom-and-geolocation)
+    - [Disable Mouse Events](#disable-mouse-events)
+- [Markers](#markers)
+    - [Add](#add)
+    - [Remove](#remove)
+    - [Change Default Icon](#change-default-icon)
 
-### Setup
+## Setup
 
 after including the ``.h`` and ``.cpp`` files, add the ``Positioning`` and ``Network`` modules to the build system.
+Then add the marker icons to one of your ``.qrc`` files.
 
 cmake:
-```
-find_package(Qt6 REQUIRED COMPONENTS Network)
-target_link_libraries(mytarget PRIVATE Qt6::Network)
-
-find_package(Qt6 REQUIRED COMPONENTS Positioning)
-target_link_libraries(mytarget PRIVATE Qt6::Positioning)
+```cmake
+find_package(Qt6 REQUIRED COMPONENTS Network Positioning)
+target_link_libraries(mytarget PRIVATE Qt6::Network Qt6::Positioning)
 ```
 
 qmake
@@ -28,7 +31,19 @@ QT += network
 QT += positioning
 ```
 
-### Create Widget
+Resources.qrc
+```xml
+<RCC>
+  <qresource>
+    <file alias="map_marker.svg">path/to/map_marker.svg</file>
+    <file alias="map_marker_alt.svg">path/to/map_marker_alt.svg</file>
+  </qresource>
+</RCC>
+```
+
+## Map Widget
+
+### Create
 
 create the widget inside the main window's constructor, then set the zoom level and the center coordinates to the place you want to display.
 
@@ -84,4 +99,36 @@ mapView->enableMouseWheelZoom();
 
 mapView->disableMouseMoveMap();
 mapView->enableMouseMoveMap();
+```
+
+## Markers
+
+> ![IMPORTANT]
+> markers are managed by the map widget and will be destroyed automatically.
+
+### Add
+
+```c++
+MapMarker* marker = mapView.addMarker(this->mapView.center());
+marker->changeIcon(":/map_marker_alt.svg");
+marker->setIconSize(64, 64); // change the size the icon is rendered on map
+marker->replaceIconColor(Qt::blue); // change color of all non-transparent pixels
+marker->replaceIconColor(Qt::red, Qt::blue); // change color of all red pixels
+marker->setLabel("Center");
+marker->setLabelFont(QFont("Sans Serif", 14));
+marker->setLabelColor(Qt::blue);
+marker->setPosition(48.858148, 2.350809)
+```
+
+### Remove
+
+```c++
+mapView.removeMarker(marker);
+mapView.clearMarkers();
+```
+
+### Change Default Icon
+
+```c++
+MapMarker::defaultMarkerIconPath = ":/map_marker_alt.svg";
 ```

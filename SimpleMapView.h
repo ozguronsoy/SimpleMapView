@@ -1,7 +1,12 @@
+#ifndef SIMPLE_MAP_VIEW_H
+#define SIMPLE_MAP_VIEW_H
+
+#include "MapMarker.h"
 #include <unordered_map>
 #include <memory>
 #include <vector>
 #include <array>
+#include <list>
 #include <QWidget>
 #include <QGeoCoordinate>
 #include <QNetworkAccessManager>
@@ -56,6 +61,11 @@ public slots:
 	bool isMouseMoveMapEnabled() const;
 	void enableMouseMoveMap();
 	void disableMouseMoveMap();
+
+	MapMarker* addMarker(const QGeoCoordinate& position);
+	MapMarker* addMarker(double latitude, double longitude);
+	void removeMarker(MapMarker* marker);
+	std::vector<MapMarker*> markers() const;
 
 signals:
 	void zoomLevelChanged();
@@ -121,6 +131,10 @@ private:
 	std::unordered_map<QString, QNetworkReply*> m_replyMap;
 	std::unordered_map<QString, std::unique_ptr<QImage>> m_tileMap;
 
+	std::list<std::unique_ptr<MapMarker>> m_markers;
+
 public:
 	static constexpr const char* INVALID_TILE_SERVER = "invalid_tile_server";
 };
+
+#endif

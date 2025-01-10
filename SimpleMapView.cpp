@@ -8,6 +8,8 @@
 #include <QWheelEvent>
 #include <QDebug>
 
+#define GET_IN_RANGE(v, minv, maxv) (std::min(std::max((v), (minv)), (maxv)))
+
 SimpleMapView::SimpleMapView(QWidget* parent)
 	: QWidget(parent),
 	m_minZoomLevel(0),
@@ -40,10 +42,7 @@ int SimpleMapView::minZoomLevel() const
 
 void SimpleMapView::setMinZoomLevel(int minZoomLevel)
 {
-	assert((void("zoomLevel cannot be negative"), minZoomLevel >= 0));
-	assert((void("minZoomLevel cannot be greater than m_maxZoomLevel"), minZoomLevel <= m_maxZoomLevel));
-
-	m_minZoomLevel = minZoomLevel;
+	m_minZoomLevel = GET_IN_RANGE(minZoomLevel, 0, m_maxZoomLevel);
 	this->setZoomLevel(m_zoomLevel);
 }
 
@@ -54,10 +53,7 @@ int SimpleMapView::maxZoomLevel() const
 
 void SimpleMapView::setMaxZoomLevel(int maxZoomLevel)
 {
-	assert((void("zoomLevel cannot be negative"), maxZoomLevel >= 0));
-	assert((void("maxZoomLevel cannot be less than m_minZoomLevel"), maxZoomLevel >= m_minZoomLevel));
-
-	m_maxZoomLevel = maxZoomLevel;
+	m_maxZoomLevel = GET_IN_RANGE(maxZoomLevel, m_minZoomLevel, INT_MAX);
 	this->setZoomLevel(m_zoomLevel);
 }
 
@@ -71,7 +67,7 @@ void SimpleMapView::setZoomLevel(int zoomLevel)
 	if (!this->isEnabled() || m_lockZoom) return;
 
 	const int oldZoomLevel = m_zoomLevel;
-	m_zoomLevel = std::min(std::max(zoomLevel, m_minZoomLevel), m_maxZoomLevel);
+	m_zoomLevel = GET_IN_RANGE(zoomLevel, m_minZoomLevel, m_maxZoomLevel);
 
 	if (oldZoomLevel != m_zoomLevel)
 	{
@@ -120,10 +116,10 @@ void SimpleMapView::setCenter(double latitude, double longitude)
 {
 	if (!this->isEnabled() || m_lockGeolocation) return;
 
-	assert((void("latitude must be between -90 to 90 inclusive"), (latitude >= -90) && (latitude <= 90)));
-	assert((void("longitude must be between -180 to 180 inclusive"), (longitude >= -180) && (longitude <= 180)));
-
 	bool isChanged = false;
+
+	latitude = GET_IN_RANGE(latitude, -90.0, 90.0);
+	longitude = GET_IN_RANGE(longitude, -180.0, 180.0);
 
 	if (latitude != this->latitude())
 	{
@@ -249,6 +245,42 @@ void SimpleMapView::enableMouseMoveMap()
 void SimpleMapView::disableMouseMoveMap()
 {
 	m_disableMouseMoveMap = true;
+}
+
+MapMarker* SimpleMapView::addMarker(const QGeoCoordinate& position)
+{
+	return this->addMarker(position.latitude(), position.longitude());
+}
+
+MapMarker* SimpleMapView::addMarker(double latitude, double longitude)
+{
+	std::unique_ptr<MapMarker>& marker = m_markers.emplace_back(new MapMarker(latitude, longitude));
+
+	auto repaintMap = [this]() { this->repaint(); };
+
+	(void)marker->connect(marker.get(), &MapMarker::positionChanged, repaintMap);
+	(void)marker->connect(marker.get(), &MapMarker::labelChanged, repaintMap);
+	(void)marker->connect(marker.get(), &MapMarker::iconChanged, repaintMap);
+
+	return marker.get();
+}
+
+void SimpleMapView::removeMarker(MapMarker* marker)
+{
+	m_markers.remove_if([marker](const std::unique_ptr<MapMarker>& m) { return m.get() == marker; });
+}
+
+std::vector<MapMarker*> SimpleMapView::markers() const
+{
+	std::vector<MapMarker*> result;
+	result.reserve(m_markers.size());
+
+	for (const std::unique_ptr<MapMarker>& marker : m_markers)
+	{
+		result.push_back(marker.get());
+	}
+
+	return result;
 }
 
 QPoint SimpleMapView::calcRequiredTileCount() const
@@ -459,6 +491,7 @@ void SimpleMapView::paintEvent(QPaintEvent* event)
 	QPainter paint(this);
 	paint.setRenderHint(QPainter::Antialiasing);
 	paint.setRenderHint(QPainter::LosslessImageRendering);
+	paint.setRenderHint(QPainter::TextAntialiasing);
 
 	const QPainterPath painterPath = this->calcPaintClipRegion();
 	paint.setClipPath(painterPath);
@@ -475,6 +508,33 @@ void SimpleMapView::paintEvent(QPaintEvent* event)
 	// draw border
 	paint.setPen(this->extractBorderPenFromStyleSheet());
 	paint.drawPath(painterPath);
+
+	// draw markers
+	for (const std::unique_ptr<MapMarker>& marker : m_markers)
+	{
+		const QPointF markerScreenPosition = this->geoCoordinateToScreenPosition(marker->position());
+		const QImage markerIcon = marker->icon().scaled(marker->iconSize().width(), marker->iconSize().height(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
+		const double mx = (markerScreenPosition.x() - (markerIcon.width() / 2.0));
+		const double my = (markerScreenPosition.y() - markerIcon.height());
+
+		paint.drawImage(mx, my, markerIcon);
+
+		if (marker->hasLabel())
+		{
+			paint.setFont(marker->labelFont());
+			paint.setPen(marker->labelColor());
+
+			QFontMetricsF fontMetrics(marker->labelFont());
+			const QRectF fontRect = fontMetrics.boundingRect(marker->label());
+
+			paint.drawText(
+				(markerScreenPosition.x() - (fontRect.width() / 2.0)),
+				(my - (fontRect.height() / 2.0)),
+				marker->label()
+			);
+		}
+	}
 }
 
 void SimpleMapView::wheelEvent(QWheelEvent* event)

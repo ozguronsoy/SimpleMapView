@@ -4,15 +4,15 @@ A Qt widget for rendering tile maps.
 
 - [Setup](#setup)
 - [Map Widget](#map-widget)
-    - [Create](#create)
+    - [Create Widget](#create-widget)
     - [Change Tile Server](#change-tile-server)
     - [Limit Zoom](#limit-zoom)
     - [Lock Zoom and Geolocation](#lock-zoom-and-geolocation)
     - [Disable Mouse Events](#disable-mouse-events)
 - [Markers](#markers)
-    - [Add](#add)
-    - [Remove](#remove)
-    - [Change Default Icon](#change-default-icon)
+    - [Add Marker](#add-marker)
+    - [Remove Marker](#remove-marker)
+    - [Change Default Marker Icon](#change-default-marker-icon)
 
 ## Setup
 
@@ -43,7 +43,7 @@ Resources.qrc
 
 ## Map Widget
 
-### Create
+### Create Widget
 
 create the widget inside the main window's constructor, then set the zoom level and the center coordinates to the place you want to display.
 
@@ -104,9 +104,9 @@ mapView->enableMouseMoveMap();
 ## Markers
 
 > [!IMPORTANT]
-> markers are managed by the map widget and will be destroyed automatically.
+> markers are children of the map widget and will be destroyed automatically when the parent is destroyed.
 
-### Add
+### Add Marker
 
 ```c++
 MapMarker* marker = mapView.addMarker(this->mapView.center());
@@ -120,14 +120,17 @@ marker->setLabelColor(Qt::blue);
 marker->setPosition(48.858148, 2.350809)
 ```
 
-### Remove
+### Remove Marker
+
+> [!CAUTION]
+> removing the marker will destroy it.
 
 ```c++
 mapView.removeMarker(marker);
 mapView.clearMarkers();
 ```
 
-### Change Default Icon
+### Change Default Marker Icon
 
 ```c++
 MapMarker::defaultMarkerIconPath = ":/map_marker_alt.svg";

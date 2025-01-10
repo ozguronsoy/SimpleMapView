@@ -254,30 +254,48 @@ MapMarker* SimpleMapView::addMarker(const QGeoCoordinate& position)
 
 MapMarker* SimpleMapView::addMarker(double latitude, double longitude)
 {
-	std::unique_ptr<MapMarker>& marker = m_markers.emplace_back(new MapMarker(latitude, longitude));
+	MapMarker* marker = new MapMarker(this, latitude, longitude);
 
 	auto repaintMap = [this]() { this->repaint(); };
+	(void)marker->connect(marker, &MapMarker::positionChanged, repaintMap);
+	(void)marker->connect(marker, &MapMarker::labelChanged, repaintMap);
+	(void)marker->connect(marker, &MapMarker::iconChanged, repaintMap);
 
-	(void)marker->connect(marker.get(), &MapMarker::positionChanged, repaintMap);
-	(void)marker->connect(marker.get(), &MapMarker::labelChanged, repaintMap);
-	(void)marker->connect(marker.get(), &MapMarker::iconChanged, repaintMap);
-
-	return marker.get();
+	return marker;
 }
 
 void SimpleMapView::removeMarker(MapMarker* marker)
 {
-	m_markers.remove_if([marker](const std::unique_ptr<MapMarker>& m) { return m.get() == marker; });
+	if (this->children().contains(marker))
+	{
+		marker->setParent(nullptr);
+		delete marker;
+	}
+}
+
+void SimpleMapView::clearMarkers()
+{
+	for (QObject* child : this->children())
+	{
+		if (child->inherits("MapMarker"))
+		{
+			child->setParent(nullptr);
+			delete child;
+		}
+	}
 }
 
 std::vector<MapMarker*> SimpleMapView::markers() const
 {
 	std::vector<MapMarker*> result;
-	result.reserve(m_markers.size());
+	result.reserve(this->children().size());
 
-	for (const std::unique_ptr<MapMarker>& marker : m_markers)
+	for (QObject* child : this->children())
 	{
-		result.push_back(marker.get());
+		if (child->inherits("MapMarker"))
+		{
+			result.push_back((MapMarker*)child);
+		}
 	}
 
 	return result;
@@ -465,7 +483,7 @@ void SimpleMapView::abortReplies()
 	m_replyMap.clear();
 }
 
-std::vector<QString> SimpleMapView::getTilesToRender() const
+std::vector<QString> SimpleMapView::visibleTiles() const
 {
 	std::vector<QString> tileKeys;
 	tileKeys.reserve(m_tileMap.size());
@@ -499,7 +517,8 @@ void SimpleMapView::paintEvent(QPaintEvent* event)
 	// fill background
 	paint.fillRect(event->region().boundingRect(), paint.background());
 
-	for (const auto& tileKey : this->getTilesToRender())
+	// draw tiles
+	for (const auto& tileKey : this->visibleTiles())
 	{
 		const QPointF screenPosition = this->tilePositionToScreenPosition(this->getTilePosition(tileKey));
 		paint.drawImage(screenPosition.x(), screenPosition.y(), *m_tileMap[tileKey]);
@@ -510,10 +529,10 @@ void SimpleMapView::paintEvent(QPaintEvent* event)
 	paint.drawPath(painterPath);
 
 	// draw markers
-	for (const std::unique_ptr<MapMarker>& marker : m_markers)
+	for (const MapMarker* marker : this->markers())
 	{
 		const QPointF markerScreenPosition = this->geoCoordinateToScreenPosition(marker->position());
-		const QImage markerIcon = marker->icon().scaled(marker->iconSize().width(), marker->iconSize().height(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		const QImage markerIcon = marker->icon().scaled(marker->iconSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
 		const double mx = (markerScreenPosition.x() - (markerIcon.width() / 2.0));
 		const double my = (markerScreenPosition.y() - markerIcon.height());

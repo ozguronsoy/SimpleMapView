@@ -1,12 +1,8 @@
 #include "MapMarker.h"
 
-MapMarker::MapMarker(const QGeoCoordinate& position, const QString& label)
-	: MapMarker(position.latitude(), position.longitude(), label)
-{
-}
-
-MapMarker::MapMarker(double latitude, double longitude, const QString& label)
-	: m_label(label),
+MapMarker::MapMarker(QObject* parent, double latitude, double longitude, const QString& label)
+	: QObject(parent),
+	m_label(label),
 	m_labelFont("Arial", 14),
 	m_labelColor(Qt::red),
 	m_icon(MapMarker::defaultMarkerIconPath),
@@ -114,12 +110,12 @@ void MapMarker::changeIcon(const QImage& icon)
 	}
 }
 
-const QSizeF& MapMarker::iconSize()
+const QSize& MapMarker::iconSize() const
 {
 	return m_iconSize;
 }
 
-void MapMarker::setIconSize(const QSizeF& size)
+void MapMarker::setIconSize(const QSize& size)
 {
 	this->setIconSize(size.width(), size.height());
 }

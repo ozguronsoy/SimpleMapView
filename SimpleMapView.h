@@ -6,7 +6,6 @@
 #include <memory>
 #include <vector>
 #include <array>
-#include <list>
 #include <QWidget>
 #include <QGeoCoordinate>
 #include <QNetworkAccessManager>
@@ -65,6 +64,7 @@ public slots:
 	MapMarker* addMarker(const QGeoCoordinate& position);
 	MapMarker* addMarker(double latitude, double longitude);
 	void removeMarker(MapMarker* marker);
+	void clearMarkers();
 	std::vector<MapMarker*> markers() const;
 
 signals:
@@ -96,7 +96,7 @@ protected:
 	void fetchTile(const QPoint& tilePosition);
 	void abortReplies();
 	
-	std::vector<QString> getTilesToRender() const;
+	std::vector<QString> visibleTiles() const;
 
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void wheelEvent(QWheelEvent* event) override;
@@ -130,9 +130,6 @@ private:
 
 	std::unordered_map<QString, QNetworkReply*> m_replyMap;
 	std::unordered_map<QString, std::unique_ptr<QImage>> m_tileMap;
-
-	std::list<std::unique_ptr<MapMarker>> m_markers;
-
 public:
 	static constexpr const char* INVALID_TILE_SERVER = "invalid_tile_server";
 };

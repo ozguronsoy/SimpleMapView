@@ -13,8 +13,7 @@ class MapMarker : public QObject
 	Q_OBJECT
 
 public:
-	explicit MapMarker(const QGeoCoordinate& position, const QString& label = "");
-	MapMarker(double latitude, double longitude, const QString& label = "");
+	explicit MapMarker(QObject* parent = nullptr, double latitude = 0.0, double longitude = 0.0, const QString& label = "");
 
 public slots:
 	double latitude() const;
@@ -41,8 +40,8 @@ public slots:
 	void changeIcon(const QString& iconPath);
 	void changeIcon(const QImage& icon);
 
-	const QSizeF& iconSize();
-	void setIconSize(const QSizeF& size);
+	const QSize& iconSize() const;
+	void setIconSize(const QSize& size);
 	void setIconSize(double width, double height);
 
 	void replaceIconColor(const QColor& newColor);
@@ -61,7 +60,7 @@ private:
 	QColor m_labelColor;
 	
 	QImage m_icon;
-	QSizeF m_iconSize;
+	QSize m_iconSize;
 
 public:
 	static inline QString defaultMarkerIconPath = ":/map_marker.svg";

@@ -150,11 +150,7 @@ void SimpleMapView::setTileServer(const QString& tileServer)
 {
 	if (tileServer == m_tileServer) return;
 
-	this->abortReplies();
-	m_tileMap.clear();
-	m_tileServer = tileServer;
-
-	QNetworkRequest request(this->getTileServerUrl(QPoint(0, 0), 0));
+	QNetworkRequest request(this->formatTileServerUrl(tileServer, QPoint(0, 0), 0));
 	request.setRawHeader("User-Agent", "Qt/SimpleMapView");
 	request.setTransferTimeout(5000);
 
@@ -166,25 +162,24 @@ void SimpleMapView::setTileServer(const QString& tileServer)
 
 	if (reply->error() == QNetworkReply::NoError)
 	{
+		this->abortReplies();
+		m_tileMap.clear();
+
 		QImage tileImage;
 		tileImage.loadFromData(reply->readAll());
-		if (tileImage.width() > 0)
-		{
-			m_tileSize = tileImage.width();
-		}
+		m_tileSize = tileImage.width();
+		m_tileServer = tileServer;
+
+		this->updateMap();
+		emit this->tileServerChanged();
 	}
 	else
 	{
 		qDebug() << "[SimpleMapView]" << reply->errorString();
-		qDebug() << "[SimpleMapView]" << "failed to set the tile server to" << m_tileServer;
-		m_tileServer = SimpleMapView::TileServers::INVALID;
+		qDebug() << "[SimpleMapView]" << "failed to set the tile server to" << tileServer;
 	}
 
 	reply->deleteLater();
-
-	this->updateMap();
-
-	emit this->tileServerChanged();
 }
 
 bool SimpleMapView::isZoomLocked() const
@@ -373,24 +368,36 @@ bool SimpleMapView::validateTilePosition(const QPoint& tilePosition) const
 
 QString SimpleMapView::getTileKey(const QPoint& tilePosition) const
 {
-	return QString("%1 %2").arg(tilePosition.x()).arg(tilePosition.y());
+	return QString("%1 %2 %3").arg(tilePosition.x()).arg(tilePosition.y()).arg(m_zoomLevel);
 }
 
-QPoint SimpleMapView::getTilePosition(const QString& tileKey) const
+QPoint SimpleMapView::getTilePosition(const QString& tileKey, int* outZoomLevel) const
 {
-	const QStringList positionStr = tileKey.split(" ");
-	const int x = positionStr[0].toInt();
-	const int y = positionStr[1].toInt();
-	return QPoint(x, y);
+	const QStringList splitKey = tileKey.split(" ");
+	if (splitKey.size() < 3)
+	{
+		qDebug() << "[SimpleMapView]" << "invalid tile key";
+		if (outZoomLevel != nullptr)
+		{
+			(*outZoomLevel) = 0;
+		}
+		return QPoint();
+	}
+
+	if (outZoomLevel != nullptr)
+	{
+		(*outZoomLevel) = splitKey[2].toInt();
+	}
+
+	return QPoint(splitKey[0].toInt(), splitKey[1].toInt());
 }
 
-QUrl SimpleMapView::getTileServerUrl(const QPoint& tilePosition, int zoomLevel) const
+QUrl SimpleMapView::formatTileServerUrl(QString tileServerUrl, const QPoint& tilePosition, int zoomLevel) const
 {
-	QString temp = m_tileServer;
-	temp.replace("{x}", QString::number(tilePosition.x()));
-	temp.replace("{y}", QString::number(tilePosition.y()));
-	temp.replace("{z}", QString::number(zoomLevel));
-	return QUrl(temp);
+	tileServerUrl.replace("{x}", QString::number(tilePosition.x()));
+	tileServerUrl.replace("{y}", QString::number(tilePosition.y()));
+	tileServerUrl.replace("{z}", QString::number(zoomLevel));
+	return QUrl(tileServerUrl);
 }
 
 void SimpleMapView::updateMap()
@@ -429,7 +436,7 @@ void SimpleMapView::fetchTile(const QPoint& tilePosition)
 {
 	if (m_tileServer == SimpleMapView::TileServers::INVALID) return;
 
-	QNetworkRequest request(this->getTileServerUrl(tilePosition, m_zoomLevel));
+	QNetworkRequest request(this->formatTileServerUrl(m_tileServer, tilePosition, m_zoomLevel));
 	request.setRawHeader("User-Agent", "Qt/SimpleMapView");
 	request.setTransferTimeout(5000);
 
@@ -461,7 +468,7 @@ void SimpleMapView::fetchTile(const QPoint& tilePosition)
 
 			if (m_replyMap.size() == 0)
 			{
-				this->update();
+				this->repaint();
 			}
 		}
 	);

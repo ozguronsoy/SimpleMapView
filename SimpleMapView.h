@@ -86,11 +86,11 @@ protected:
 	QPointF screenPositionToTilePosition(const QPointF& screenPosition) const;
 	QGeoCoordinate screenPositionToGeoCoordinate(const QPointF& screenPosition) const;
 
-	bool validateTilePosition(const QPoint& tilePosition) const;
+	virtual bool validateTilePosition(const QPoint& tilePosition) const;
 
-	QString getTileKey(const QPoint& tilePosition) const;
-	QPoint getTilePosition(const QString& tileKey) const;
-	QUrl getTileServerUrl(const QPoint& tilePosition, int zoomLevel) const;
+	virtual QString getTileKey(const QPoint& tilePosition) const;
+	virtual QPoint getTilePosition(const QString& tileKey, int* outZoomLevel = nullptr) const;
+	virtual QUrl formatTileServerUrl(QString tileServerUrl, const QPoint& tilePosition, int zoomLevel) const;
 
 	void updateMap();
 	void fetchTile(const QPoint& tilePosition);

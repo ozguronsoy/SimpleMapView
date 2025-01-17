@@ -3,15 +3,22 @@
 A Qt widget for rendering tile maps.
 
 - [Setup](#setup)
+
 - [Map Widget](#map-widget)
     - [Create Widget](#create-widget)
     - [Change Tile Server](#change-tile-server)
     - [Limit Zoom](#limit-zoom)
     - [Lock Zoom and Geolocation](#lock-zoom-and-geolocation)
     - [Disable Mouse Events](#disable-mouse-events)
+
+- [Map Items](#map-items)
+    - [Ellipse](#ellipse)
+    - [Rect](#rect)
+    - [Text](#text)
+    - [Image](#image)
+
 - [Markers](#markers)
     - [Add Marker](#add-marker)
-    - [Remove Marker](#remove-marker)
     - [Change Default Marker Icon](#change-default-marker-icon)
 
 ## Setup
@@ -23,6 +30,24 @@ cmake:
 ```cmake
 find_package(Qt6 REQUIRED COMPONENTS Network Positioning)
 target_link_libraries(mytarget PRIVATE Qt6::Network Qt6::Positioning)
+
+set(PROJECT_SOURCES
+    # your files
+
+    SimpleMapView.h
+    SimpleMapView.cpp
+    MapItem.h
+    MapItem.cpp
+    MapEllipse.h
+    MapEllipse.cpp
+    MapRect.h
+    MapRect.cpp
+    MapText.h
+    MapText.cpp
+    MapImage.h
+    MapImage.cpp
+)
+
 ```
 
 qmake
@@ -99,37 +124,91 @@ mapView->disableMouseMoveMap();
 mapView->enableMouseMoveMap();
 ```
 
-## Markers
+## Map Items
 
-> [!IMPORTANT]
-> markers are children of the map widget and will be destroyed automatically when the parent is destroyed.
+map items are used for drawing on the map.
+All map items are derived from the ``MapItem`` class.
+
+### Ellipse
+
+```c++
+MapEllipse* ellipse = new MapEllipse(&mapView);
+
+ellipse->setPosition(mapView.center());
+ellipse->setAlignmentFlags(Qt::AlignCenter);
+
+ellipse->setBackgroundColor(QColor::fromRgba(0xAF0000FF));
+ellipse->setBorderColor(Qt::black);
+ellipse->setBorderWidth(5);
+
+ellipse->setFixedSize(200, 150); // in pixels, size won't change with zoom and geolocation
+ellipse->setGeoSize(1e-3, 1e-5); // in degrees (longitude, latitude), size will change with zoom and geolocation
+// if fixed size is set, it will be used instead of the geosize
+```
+
+### Rect
+
+``MapRect`` derives from ``MapEllipse`` and supports all its features.
+
+```c++
+MapRect* rect = new MapRect(&mapView);
+
+rect->setPosition(mapView.center());
+rect->setFixedSize(200, 150);
+
+rect->setBorderRadius(8);
+rect->setBorderRadius(8, 20, 0, 40);
+```
+
+### Text
+
+``MapText`` derives from ``MapRect`` and supports all its features.
+
+```c++
+MapText* text = new MapText(&mapView);
+text->setPosition(mapView.center());
+
+// if size is not set (either fixed or geo)
+// text size will be used.
+text->setText("Lorem ipsum dolor sit amet.");
+
+text->setFont(QFont("Arial", 14));
+text->setTextColor(Qt::white);
+text->setTextFlags(Qt::TextSingleLine);
+text->setTextPadding(10, 10, 10, 10);
+```
+
+
+### Image
+
+``MapImage`` derives from ``MapRect`` and supports all its features.
+
+```c++
+MapImage* img = new MapImage(&mapView);
+
+img->setPosition(mapView.center());
+img->setAlignmentFlags(Qt::AlignCenter);
+img->setBorderRadius(8);
+
+img->setAspectRatioMode(Qt::IgnoreAspectRatio);
+img->setImage(QImage("image.png").scaledToWidth(200, Qt::SmoothTransformation));
+//img->setImage("image.png");
+```
+
+## Markers
 
 ### Add Marker
 
 ```c++
-MapMarker* marker = mapView.addMarker(this->mapView.center());
-marker->changeIcon(":/map_marker_alt.svg");
-marker->setIconSize(64, 64); // change the size the icon is rendered on map
-marker->replaceIconColor(Qt::blue); // change color of all non-transparent pixels
-marker->replaceIconColor(Qt::red, Qt::blue); // change color of all red pixels
-marker->setLabel("Center");
-marker->setLabelFont(QFont("Sans Serif", 14));
-marker->setLabelColor(Qt::blue);
-marker->setPosition(48.858148, 2.350809)
-```
-
-### Remove Marker
-
-> [!CAUTION]
-> removing the marker will destroy it.
-
-```c++
-mapView.removeMarker(marker);
-mapView.clearMarkers();
+MapImage* markerIcon = mapView.addMarker(mapView.center());
+markerIcon->findChild<MapText*>()->setText("Marker Text");
 ```
 
 ### Change Default Marker Icon
-
 ```c++
-MapMarker::defaultMarkerIconPath = ":/map_marker_alt.svg";
+mapView.setMarkerIcon(":/map_marker_alt.svg");
+
+QImage newIcon(":/map_marker_alt.svg");
+// newIcon.doStuff();
+mapView.setMarkerIcon(newIcon);
 ```

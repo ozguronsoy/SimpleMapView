@@ -1,7 +1,11 @@
 #ifndef SIMPLE_MAP_VIEW_H
 #define SIMPLE_MAP_VIEW_H
 
-#include "MapMarker.h"
+#include "MapItem.h"
+#include "MapEllipse.h"
+#include "MapRect.h"
+#include "MapText.h"
+#include "MapImage.h"
 #include <unordered_map>
 #include <memory>
 #include <vector>
@@ -32,15 +36,15 @@ public slots:
 	int zoomLevel() const;
 	void setZoomLevel(int zoomLevel);
 
-	double latitude() const;
-	void setLatitude(double latitude);
+	qreal latitude() const;
+	void setLatitude(qreal latitude);
 
-	double longitude() const;
-	void setLongitude(double longitude);
+	qreal longitude() const;
+	void setLongitude(qreal longitude);
 
 	const QGeoCoordinate& center() const;
 	void setCenter(const QGeoCoordinate& center);
-	void setCenter(double latitude, double longitude);
+	void setCenter(qreal latitude, qreal longitude);
 
 	const QString& tileServer() const;
 	void setTileServer(const QString& tileServer);
@@ -61,11 +65,22 @@ public slots:
 	void enableMouseMoveMap();
 	void disableMouseMoveMap();
 
-	MapMarker* addMarker(const QGeoCoordinate& position);
-	MapMarker* addMarker(double latitude, double longitude);
-	void removeMarker(MapMarker* marker);
-	void clearMarkers();
-	std::vector<MapMarker*> markers() const;
+	const QImage& markerIcon() const;
+	void setMarkerIcon(const QImage& icon);
+
+	MapImage* addMarker(const QGeoCoordinate& position = QGeoCoordinate());
+	MapImage* addMarker(qreal latitude, qreal longitude);
+
+	QPointF geoCoordinateToTilePosition(qreal latitude, qreal longitude) const;
+	QPointF geoCoordinateToTilePosition(const QGeoCoordinate& geoCoordinate) const;
+	QPointF geoCoordinateToScreenPosition(qreal latitude, qreal longitude) const;
+	QPointF geoCoordinateToScreenPosition(const QGeoCoordinate& geoCoordinate) const;
+
+	QGeoCoordinate tilePositionToGeoCoordinate(const QPointF& tilePosition) const;
+	QPointF tilePositionToScreenPosition(const QPointF& tilePosition) const;
+
+	QPointF screenPositionToTilePosition(const QPointF& screenPosition) const;
+	QGeoCoordinate screenPositionToGeoCoordinate(const QPointF& screenPosition) const;
 
 signals:
 	void zoomLevelChanged();
@@ -74,17 +89,6 @@ signals:
 
 protected:
 	QPoint calcRequiredTileCount() const;
-
-	QPointF geoCoordinateToTilePosition(double latitude, double longitude) const;
-	QPointF geoCoordinateToTilePosition(const QGeoCoordinate& geoCoordinate) const;
-	QPointF geoCoordinateToScreenPosition(double latitude, double longitude) const;
-	QPointF geoCoordinateToScreenPosition(const QGeoCoordinate& geoCoordinate) const;
-
-	QGeoCoordinate tilePositionToGeoCoordinate(const QPointF& tilePosition) const;
-	QPointF tilePositionToScreenPosition(const QPointF& tilePosition) const;
-
-	QPointF screenPositionToTilePosition(const QPointF& screenPosition) const;
-	QGeoCoordinate screenPositionToGeoCoordinate(const QPointF& screenPosition) const;
 
 	virtual bool validateTilePosition(const QPoint& tilePosition) const;
 
@@ -95,7 +99,7 @@ protected:
 	void updateMap();
 	void fetchTile(const QPoint& tilePosition);
 	void abortReplies();
-	
+
 	std::vector<QString> visibleTiles() const;
 
 	virtual void paintEvent(QPaintEvent* event) override;
@@ -127,6 +131,8 @@ private:
 	bool m_disableMouseMoveMap;
 
 	QPoint m_lastMousePosition;
+	
+	QImage m_markerIcon;
 
 	std::unordered_map<QString, QNetworkReply*> m_replyMap;
 	std::unordered_map<QString, std::unique_ptr<QImage>> m_tileMap;

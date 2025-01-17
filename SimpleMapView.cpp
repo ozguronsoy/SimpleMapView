@@ -24,7 +24,8 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_lockZoom(false),
 	m_lockGeolocation(false),
 	m_disableMouseWheelZoom(false),
-	m_disableMouseMoveMap(false)
+	m_disableMouseMoveMap(false),
+	m_markerIcon(":/map_marker.svg")
 {
 	this->setTileServer(SimpleMapView::TileServers::OSM);
 }
@@ -82,22 +83,22 @@ void SimpleMapView::setZoomLevel(int zoomLevel)
 	}
 }
 
-double SimpleMapView::latitude() const
+qreal SimpleMapView::latitude() const
 {
 	return m_center.latitude();
 }
 
-void SimpleMapView::setLatitude(double latitude)
+void SimpleMapView::setLatitude(qreal latitude)
 {
 	this->setCenter(latitude, this->longitude());
 }
 
-double SimpleMapView::longitude() const
+qreal SimpleMapView::longitude() const
 {
 	return m_center.longitude();
 }
 
-void SimpleMapView::setLongitude(double longitude)
+void SimpleMapView::setLongitude(qreal longitude)
 {
 	this->setCenter(this->latitude(), longitude);
 }
@@ -112,7 +113,7 @@ void SimpleMapView::setCenter(const QGeoCoordinate& center)
 	this->setCenter(center.latitude(), center.longitude());
 }
 
-void SimpleMapView::setCenter(double latitude, double longitude)
+void SimpleMapView::setCenter(qreal latitude, qreal longitude)
 {
 	if (!this->isEnabled() || m_lockGeolocation) return;
 
@@ -242,72 +243,55 @@ void SimpleMapView::disableMouseMoveMap()
 	m_disableMouseMoveMap = true;
 }
 
-MapMarker* SimpleMapView::addMarker(const QGeoCoordinate& position)
+const QImage& SimpleMapView::markerIcon() const
+{
+	return m_markerIcon;
+}
+
+void SimpleMapView::setMarkerIcon(const QImage& icon)
+{
+	m_markerIcon = icon;
+}
+
+MapImage* SimpleMapView::addMarker(const QGeoCoordinate& position)
 {
 	return this->addMarker(position.latitude(), position.longitude());
 }
 
-MapMarker* SimpleMapView::addMarker(double latitude, double longitude)
+MapImage* SimpleMapView::addMarker(qreal latitude, qreal longitude)
 {
-	MapMarker* marker = new MapMarker(this, latitude, longitude);
+	MapImage* markerIcon = new MapImage(this);
+	markerIcon->setPosition(latitude, longitude);
+	markerIcon->setAlignmentFlags(Qt::AlignHCenter | Qt::AlignBottom);
+	markerIcon->setImage(m_markerIcon);
+	markerIcon->setFixedSize(48, 48);
+	markerIcon->setBackgroundColor(Qt::transparent);
 
-	auto repaintMap = [this]() { this->repaint(); };
-	(void)marker->connect(marker, &MapMarker::positionChanged, repaintMap);
-	(void)marker->connect(marker, &MapMarker::labelChanged, repaintMap);
-	(void)marker->connect(marker, &MapMarker::iconChanged, repaintMap);
+	MapText* markerText = new MapText(markerIcon);
+	markerText->setPosition(latitude, longitude);
+	markerText->setAlignmentFlags(Qt::AlignHCenter | Qt::AlignBottom);
+	markerText->setBackgroundColor(QColor::fromRgba(0xAF000000));
+	markerText->setBorderRadius(8);
+	markerText->setTextColor(Qt::white);
 
-	return marker;
-}
-
-void SimpleMapView::removeMarker(MapMarker* marker)
-{
-	if (this->children().contains(marker))
-	{
-		marker->setParent(nullptr);
-		delete marker;
-	}
-}
-
-void SimpleMapView::clearMarkers()
-{
-	for (QObject* child : this->children())
-	{
-		if (child->inherits("MapMarker"))
+	auto adjustMarkerTextPosition = [this, markerText, markerIcon]()
 		{
-			child->setParent(nullptr);
-			delete child;
-		}
-	}
+			QPointF screenPosition = this->geoCoordinateToScreenPosition(markerIcon->position());
+			screenPosition.ry() -= markerIcon->fixedHeight() + markerText->textPadding().bottom() + 5;
+			markerText->setPosition(this->screenPositionToGeoCoordinate(screenPosition));
+		};
+
+	(void)markerIcon->connect(markerIcon, &MapImage::positionChanged, adjustMarkerTextPosition);
+	(void)markerIcon->connect(this, &SimpleMapView::zoomLevelChanged, adjustMarkerTextPosition);
+	adjustMarkerTextPosition();
+
+	return markerIcon;
 }
 
-std::vector<MapMarker*> SimpleMapView::markers() const
+QPointF SimpleMapView::geoCoordinateToTilePosition(qreal latitude, qreal longitude) const
 {
-	std::vector<MapMarker*> result;
-	result.reserve(this->children().size());
-
-	for (QObject* child : this->children())
-	{
-		if (child->inherits("MapMarker"))
-		{
-			result.push_back((MapMarker*)child);
-		}
-	}
-
-	return result;
-}
-
-QPoint SimpleMapView::calcRequiredTileCount() const
-{
-	const int x = ceil(((double)this->width()) / m_tileSize);
-	const int y = ceil(((double)this->height()) / m_tileSize);
-
-	return QPoint(x, y);
-}
-
-QPointF SimpleMapView::geoCoordinateToTilePosition(double latitude, double longitude) const
-{
-	const double x = ((longitude + 180.0) / (360.0)) * m_tileCountPerAxis;
-	const double y = ((1.0 - (log(tan(M_PI_4 + (qDegreesToRadians(latitude) / 2.0))) / M_PI)) / 2.0) * m_tileCountPerAxis;
+	const qreal x = ((longitude + 180.0) / (360.0)) * m_tileCountPerAxis;
+	const qreal y = ((1.0 - (log(tan(M_PI_4 + (qDegreesToRadians(latitude) / 2.0))) / M_PI)) / 2.0) * m_tileCountPerAxis;
 
 	return QPointF(x, y);
 }
@@ -317,7 +301,7 @@ QPointF SimpleMapView::geoCoordinateToTilePosition(const QGeoCoordinate& geoCoor
 	return this->geoCoordinateToTilePosition(geoCoordinate.latitude(), geoCoordinate.longitude());
 }
 
-QPointF SimpleMapView::geoCoordinateToScreenPosition(double latitude, double longitude) const
+QPointF SimpleMapView::geoCoordinateToScreenPosition(qreal latitude, qreal longitude) const
 {
 	return this->tilePositionToScreenPosition(this->geoCoordinateToTilePosition(latitude, longitude));
 }
@@ -329,9 +313,8 @@ QPointF SimpleMapView::geoCoordinateToScreenPosition(const QGeoCoordinate& geoCo
 
 QGeoCoordinate SimpleMapView::tilePositionToGeoCoordinate(const QPointF& tilePosition) const
 {
-	const int tileCountPerAxis = (1 << m_zoomLevel);
-	const double longitude = tilePosition.x() * (360.0 / tileCountPerAxis) - 180.0;
-	const double latitude = qRadiansToDegrees(2.0 * (atan(exp(-(tilePosition.y() * (2.0 / tileCountPerAxis) - 1) * M_PI)) - M_PI_4));
+	const qreal longitude = tilePosition.x() * (360.0 / m_tileCountPerAxis) - 180.0;
+	const qreal latitude = qRadiansToDegrees(2.0 * (atan(exp(-M_PI * (tilePosition.y() * (2.0 / m_tileCountPerAxis) - 1))) - M_PI_4));
 
 	return QGeoCoordinate(latitude, longitude);
 }
@@ -340,8 +323,8 @@ QPointF SimpleMapView::tilePositionToScreenPosition(const QPointF& tilePosition)
 {
 	const QPointF relativeTilePosition = tilePosition - this->geoCoordinateToTilePosition(m_center);
 
-	const double x = (this->width() / 2.0) + (relativeTilePosition.x() * m_tileSize);
-	const double y = (this->height() / 2.0) + (relativeTilePosition.y() * m_tileSize);
+	const qreal x = (this->width() / 2.0) + (relativeTilePosition.x() * m_tileSize);
+	const qreal y = (this->height() / 2.0) + (relativeTilePosition.y() * m_tileSize);
 
 	return QPointF(x, y);
 }
@@ -350,8 +333,8 @@ QPointF SimpleMapView::screenPositionToTilePosition(const QPointF& screenPositio
 {
 	const QPointF centerTilePosition = this->geoCoordinateToTilePosition(m_center);
 
-	const double x = (m_tileSize * (screenPosition.x() - (this->width() / 2.0))) + centerTilePosition.x();
-	const double y = (m_tileSize * (screenPosition.y() - (this->height() / 2.0))) + centerTilePosition.y();
+	const qreal x = ((screenPosition.x() - (this->width() / 2.0)) / m_tileSize) + centerTilePosition.x();
+	const qreal y = ((screenPosition.y() - (this->height() / 2.0)) / m_tileSize) + centerTilePosition.y();
 
 	return QPointF(x, y);
 }
@@ -359,6 +342,14 @@ QPointF SimpleMapView::screenPositionToTilePosition(const QPointF& screenPositio
 QGeoCoordinate SimpleMapView::screenPositionToGeoCoordinate(const QPointF& screenPosition) const
 {
 	return this->tilePositionToGeoCoordinate(this->screenPositionToTilePosition(screenPosition));
+}
+
+QPoint SimpleMapView::calcRequiredTileCount() const
+{
+	const int x = ceil(((qreal)this->width()) / m_tileSize);
+	const int y = ceil(((qreal)this->height()) / m_tileSize);
+
+	return QPoint(x, y);
 }
 
 bool SimpleMapView::validateTilePosition(const QPoint& tilePosition) const
@@ -513,54 +504,41 @@ std::vector<QString> SimpleMapView::visibleTiles() const
 
 void SimpleMapView::paintEvent(QPaintEvent* event)
 {
-	QPainter paint(this);
-	paint.setRenderHint(QPainter::Antialiasing);
-	paint.setRenderHint(QPainter::LosslessImageRendering);
-	paint.setRenderHint(QPainter::TextAntialiasing);
+	QPainter painter(this);
+	painter.setRenderHint(QPainter::Antialiasing);
+	painter.setRenderHint(QPainter::TextAntialiasing);
+	painter.setRenderHint(QPainter::LosslessImageRendering);
 
 	const QPainterPath painterPath = this->calcPaintClipRegion();
-	paint.setClipPath(painterPath);
+	painter.setClipPath(painterPath);
 
 	// fill background
-	paint.fillRect(event->region().boundingRect(), paint.background());
+	painter.fillRect(event->region().boundingRect(), painter.background());
 
 	// draw tiles
 	for (const auto& tileKey : this->visibleTiles())
 	{
 		const QPointF screenPosition = this->tilePositionToScreenPosition(this->getTilePosition(tileKey));
-		paint.drawImage(screenPosition.x(), screenPosition.y(), *m_tileMap[tileKey]);
+		painter.drawImage(screenPosition.x(), screenPosition.y(), *m_tileMap[tileKey]);
 	}
+
+
+	std::function<void(QObject*)> drawItems = [&painter, &drawItems](QObject* parent)
+		{
+			for (QObject* child : parent->children())
+			{
+				if (child->inherits("MapItem"))
+				{
+					((MapItem*)child)->paint(painter);
+				}
+				drawItems(child);
+			}
+		};
+	drawItems(this);
 
 	// draw border
-	paint.setPen(this->extractBorderPenFromStyleSheet());
-	paint.drawPath(painterPath);
-
-	// draw markers
-	for (const MapMarker* marker : this->markers())
-	{
-		const QPointF markerScreenPosition = this->geoCoordinateToScreenPosition(marker->position());
-		const QImage markerIcon = marker->icon().scaled(marker->iconSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-
-		const double mx = (markerScreenPosition.x() - (markerIcon.width() / 2.0));
-		const double my = (markerScreenPosition.y() - markerIcon.height());
-
-		paint.drawImage(mx, my, markerIcon);
-
-		if (marker->hasLabel())
-		{
-			paint.setFont(marker->labelFont());
-			paint.setPen(marker->labelColor());
-
-			QFontMetricsF fontMetrics(marker->labelFont());
-			const QRectF fontRect = fontMetrics.boundingRect(marker->label());
-
-			paint.drawText(
-				(markerScreenPosition.x() - (fontRect.width() / 2.0)),
-				(my - (fontRect.height() / 2.0)),
-				marker->label()
-			);
-		}
-	}
+	painter.setPen(this->extractBorderPenFromStyleSheet());
+	painter.drawPath(painterPath);
 }
 
 void SimpleMapView::wheelEvent(QWheelEvent* event)
@@ -593,10 +571,10 @@ void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 		const QPoint deltaMousePosition = currentMousePosition - m_lastMousePosition;
 
 		// 1.0 / (dx/dlongitude)
-		const double deltaLongitude = 360.0 / m_tileCountPerAxis;
+		const qreal deltaLongitude = 360.0 / m_tileCountPerAxis;
 
 		// 1.0 / (dy/dlatitude)
-		const double deltaLatitude = -(360.0 / m_tileCountPerAxis) * cos(qDegreesToRadians(this->latitude()));
+		const qreal deltaLatitude = -(360.0 / m_tileCountPerAxis) * cos(qDegreesToRadians(this->latitude()));
 
 		this->setCenter(
 			(this->latitude() - (deltaMousePosition.y() * (deltaLatitude / m_tileSize))),

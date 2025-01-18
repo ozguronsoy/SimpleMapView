@@ -14,6 +14,8 @@ A Qt widget for rendering tile maps.
     - [Rect](#rect)
     - [Text](#text)
     - [Image](#image)
+    - [Lines](#lines)
+    - [Polygon](#polygon)
 - [Markers](#markers)
     - [Add Marker](#add-marker)
     - [Change Default Marker Icon](#change-default-marker-icon)
@@ -187,6 +189,30 @@ img->setBorderRadius(8);
 img->setAspectRatioMode(Qt::IgnoreAspectRatio);
 img->setImage(QImage("image.png").scaledToWidth(200, Qt::SmoothTransformation));
 //img->setImage("image.png");
+```
+
+### Lines
+
+```c++
+MapLines* lines = new MapLines(mapView);
+lines->setPen(QPen(Qt::blue, 5));
+
+lines->points().push_back(QPointF(0, 0));
+lines->points().push_back(mapView->center());
+```
+
+### Polygon
+
+```c++
+MapPolygon* polygon = new MapPolygon(mapView);
+polygon->setPen(QPen(Qt::blue, 5));
+polygon->setBackgroundColor(QColor(255, 0, 0, 50));
+
+polygon->points() = {
+	QPointF(-100, 0),
+	mapView->center(),
+	QPointF(-100, mapView->height() * 2)
+};
 ```
 
 ## Markers

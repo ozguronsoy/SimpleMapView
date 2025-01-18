@@ -6,6 +6,8 @@
 #include "MapRect.h"
 #include "MapText.h"
 #include "MapImage.h"
+#include "MapLines.h"
+#include "MapPolygon.h"
 #include <unordered_map>
 #include <memory>
 #include <vector>

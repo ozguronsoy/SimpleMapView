@@ -2,8 +2,22 @@
 #include "SimpleMapView.h"
 
 MapItem::MapItem(QObject* parent)
-	: QObject(parent)
+	: QObject(parent),
+	m_pen(Qt::black, 0.0)
 {
+}
+
+const QPen& MapItem::pen() const
+{
+	return m_pen;
+}
+
+void MapItem::setPen(const QPen& pen)
+{
+	m_pen = pen;
+
+	emit this->changed();
+	emit this->penChanged();
 }
 
 SimpleMapView* MapItem::getMapView() const

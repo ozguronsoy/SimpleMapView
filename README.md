@@ -3,20 +3,17 @@
 A Qt widget for rendering tile maps.
 
 - [Setup](#setup)
-
 - [Map Widget](#map-widget)
     - [Create Widget](#create-widget)
     - [Change Tile Server](#change-tile-server)
     - [Limit Zoom](#limit-zoom)
     - [Lock Zoom and Geolocation](#lock-zoom-and-geolocation)
     - [Disable Mouse Events](#disable-mouse-events)
-
 - [Map Items](#map-items)
     - [Ellipse](#ellipse)
     - [Rect](#rect)
     - [Text](#text)
     - [Image](#image)
-
 - [Markers](#markers)
     - [Add Marker](#add-marker)
     - [Change Default Marker Icon](#change-default-marker-icon)
@@ -132,14 +129,13 @@ All map items are derived from the ``MapItem`` class.
 ### Ellipse
 
 ```c++
-MapEllipse* ellipse = new MapEllipse(&mapView);
+MapEllipse* ellipse = new MapEllipse(mapView);
 
-ellipse->setPosition(mapView.center());
+ellipse->setPosition(mapView->center());
 ellipse->setAlignmentFlags(Qt::AlignCenter);
 
 ellipse->setBackgroundColor(QColor::fromRgba(0xAF0000FF));
-ellipse->setBorderColor(Qt::black);
-ellipse->setBorderWidth(5);
+ellipse->setPen(QPen(Qt::black, 3));
 
 ellipse->setFixedSize(200, 150); // in pixels, size won't change with zoom and geolocation
 ellipse->setGeoSize(1e-3, 1e-5); // in degrees (longitude, latitude), size will change with zoom and geolocation
@@ -151,9 +147,9 @@ ellipse->setGeoSize(1e-3, 1e-5); // in degrees (longitude, latitude), size will 
 ``MapRect`` derives from ``MapEllipse`` and supports all its features.
 
 ```c++
-MapRect* rect = new MapRect(&mapView);
+MapRect* rect = new MapRect(mapView);
 
-rect->setPosition(mapView.center());
+rect->setPosition(mapView->center());
 rect->setFixedSize(200, 150);
 
 rect->setBorderRadius(8);
@@ -165,8 +161,8 @@ rect->setBorderRadius(8, 20, 0, 40);
 ``MapText`` derives from ``MapRect`` and supports all its features.
 
 ```c++
-MapText* text = new MapText(&mapView);
-text->setPosition(mapView.center());
+MapText* text = new MapText(mapView);
+text->setPosition(mapView->center());
 
 // if size is not set (either fixed or geo)
 // text size will be used.
@@ -184,9 +180,9 @@ text->setTextPadding(10, 10, 10, 10);
 ``MapImage`` derives from ``MapRect`` and supports all its features.
 
 ```c++
-MapImage* img = new MapImage(&mapView);
+MapImage* img = new MapImage(mapView);
 
-img->setPosition(mapView.center());
+img->setPosition(mapView->center());
 img->setAlignmentFlags(Qt::AlignCenter);
 img->setBorderRadius(8);
 
@@ -200,15 +196,15 @@ img->setImage(QImage("image.png").scaledToWidth(200, Qt::SmoothTransformation));
 ### Add Marker
 
 ```c++
-MapImage* markerIcon = mapView.addMarker(mapView.center());
+MapImage* markerIcon = mapView->addMarker(mapView->center());
 markerIcon->findChild<MapText*>()->setText("Marker Text");
 ```
 
 ### Change Default Marker Icon
 ```c++
-mapView.setMarkerIcon(":/map_marker_alt.svg");
+mapView->setMarkerIcon(":/map_marker_alt.svg");
 
 QImage newIcon(":/map_marker_alt.svg");
 // newIcon.doStuff();
-mapView.setMarkerIcon(newIcon);
+mapView->setMarkerIcon(newIcon);
 ```

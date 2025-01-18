@@ -48,20 +48,11 @@ public:
 	const QColor& backgroundColor() const;
 	Q_SLOT void setBackgroundColor(const QColor& c);
 
-	const QColor& borderColor() const;
-	Q_SLOT void setBorderColor(const QColor& c);
-
-	qreal borderWidth() const;
-	Q_SLOT void setBorderWidth(qreal bw);
-
 	virtual void paint(QPainter& painter) const override;
 
 	Q_SIGNAL void positionChanged();
 	Q_SIGNAL void sizeChanged();
 	Q_SIGNAL void backgroundColorChanged();
-	Q_SIGNAL void borderChanged();
-	Q_SIGNAL void borderColorChanged();
-	Q_SIGNAL void borderWidthChanged();
 
 protected:
 	virtual QRectF calcPaintRect() const;
@@ -72,8 +63,6 @@ private:
 	QGeoCoordinate m_geoSize;
 	QSizeF m_fixedSize;
 	QColor m_backgroundColor;
-	QColor m_borderColor;
-	qreal m_borderWidth;
 };
 
 #endif

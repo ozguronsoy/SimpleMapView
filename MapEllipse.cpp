@@ -8,9 +8,7 @@ MapEllipse::MapEllipse(QObject* parent)
 	m_position(),
 	m_geoSize(),
 	m_fixedSize(),
-	m_backgroundColor(Qt::black),
-	m_borderColor(Qt::transparent),
-	m_borderWidth(1.0)
+	m_backgroundColor(Qt::black)
 {
 }
 
@@ -168,38 +166,6 @@ void MapEllipse::setBackgroundColor(const QColor& c)
 	emit this->backgroundColorChanged();
 }
 
-const QColor& MapEllipse::borderColor() const
-{
-	return m_borderColor;
-}
-
-void MapEllipse::setBorderColor(const QColor& c)
-{
-	m_borderColor = c;
-
-	this->repaintMap();
-
-	emit this->changed();
-	emit this->borderChanged();
-	emit this->borderColorChanged();
-}
-
-qreal MapEllipse::borderWidth() const
-{
-	return m_borderWidth;
-}
-
-void MapEllipse::setBorderWidth(qreal bw)
-{
-	m_borderWidth = bw;
-
-	this->repaintMap();
-
-	emit this->changed();
-	emit this->borderChanged();
-	emit this->borderWidthChanged();
-}
-
 void MapEllipse::paint(QPainter& painter) const
 {
 	SimpleMapView* map = this->getMapView();
@@ -210,9 +176,9 @@ void MapEllipse::paint(QPainter& painter) const
 
 		painter.fillPath(painterPath, m_backgroundColor);
 
-		if (m_borderWidth > 0)
+		if (this->pen().widthF() > 0)
 		{
-			painter.setPen(QPen(m_borderColor, m_borderWidth));
+			painter.setPen(this->pen());
 			painter.drawPath(painterPath);
 		}
 	}

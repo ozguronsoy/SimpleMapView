@@ -33,7 +33,6 @@ void MapRect::setBorderRadius(qreal topLeft, qreal topRight, qreal bottomRight, 
 	this->repaintMap();
 
 	emit this->changed();
-	emit this->borderChanged();
 	emit this->borderRadiusChanged();
 }
 
@@ -45,9 +44,9 @@ void MapRect::paint(QPainter& painter) const
 		QPainterPath painterPath = this->calcClipRegion();
 		painter.fillPath(painterPath, this->backgroundColor());
 
-		if (this->borderWidth() > 0)
+		if (this->pen().widthF() > 0)
 		{
-			painter.setPen(QPen(this->borderColor(), this->borderWidth()));
+			painter.setPen(this->pen());
 			painter.drawPath(painterPath);
 		}
 	}

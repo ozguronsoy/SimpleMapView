@@ -420,7 +420,7 @@ void SimpleMapView::updateMap()
 			}
 		}
 	}
-	if (noNewTiles) this->update();
+	if (noNewTiles) this->repaint();
 }
 
 void SimpleMapView::fetchTile(const QPoint& tilePosition)
@@ -521,7 +521,6 @@ void SimpleMapView::paintEvent(QPaintEvent* event)
 		const QPointF screenPosition = this->tilePositionToScreenPosition(this->getTilePosition(tileKey));
 		painter.drawImage(screenPosition.x(), screenPosition.y(), *m_tileMap[tileKey]);
 	}
-
 
 	std::function<void(QObject*)> drawItems = [&painter, &drawItems](QObject* parent)
 		{

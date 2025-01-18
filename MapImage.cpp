@@ -64,9 +64,9 @@ void MapImage::paint(QPainter& painter) const
 
 		// image is drawn over the border, 
 		// hence redraw it
-		if (this->borderWidth() > 0)
+		if (this->pen().widthF() > 0)
 		{
-			painter.setPen(QPen(this->borderColor(), this->borderWidth()));
+			painter.setPen(this->pen());
 			painter.drawPath(painterPath);
 		}
 	}

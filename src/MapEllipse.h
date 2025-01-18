@@ -15,35 +15,15 @@ public:
 	Qt::Alignment alignmentFlags() const;
 	Q_SLOT void setAlignmentFlags(Qt::Alignment f);
 
-	qreal latitude() const;
-	void setLatitude(qreal latitude);
-
-	qreal longitude() const;
-	void setLongitude(qreal longitude);
-
-	const QGeoCoordinate& position() const;
+	const MapPoint& position() const;
+	void setPosition(const QPointF& position);
 	void setPosition(const QGeoCoordinate& position);
-	Q_SLOT void setPosition(qreal latitude, qreal longitude);
+	Q_SLOT void setPosition(const MapPoint& position);
 
-	qreal geoWidth() const;
-	void setGeoWidth(qreal w);
-
-	qreal geoHeight() const;
-	void setGeoHeight(qreal h);
-
-	const QGeoCoordinate& geoSize() const;
-	void setGeoSize(const QGeoCoordinate& s);
-	Q_SLOT void setGeoSize(qreal w, qreal h);
-
-	qreal fixedWidth() const;
-	void setFixedWidth(qreal w);
-
-	qreal fixedHeight() const;
-	void setFixedHeight(qreal h);
-
-	const QSizeF& fixedSize() const;
-	void setFixedSize(const QSizeF& s);
-	Q_SLOT void setFixedSize(qreal w, qreal h);
+	const MapSize& size() const;
+	void setSize(const QSizeF& s);
+	void setSize(const QGeoCoordinate& s);
+	Q_SLOT void setSize(const MapSize& s);
 
 	const QColor& backgroundColor() const;
 	Q_SLOT void setBackgroundColor(const QColor& c);
@@ -56,12 +36,12 @@ public:
 
 protected:
 	virtual QRectF calcPaintRect() const;
+	virtual void applyAlignment(QPointF& p, const QSizeF& s) const;
 
 private:
 	Qt::Alignment m_alignmentFlags;
-	QGeoCoordinate m_position;
-	QGeoCoordinate m_geoSize;
-	QSizeF m_fixedSize;
+	MapPoint m_position;
+	MapSize m_size;
 	QColor m_backgroundColor;
 };
 

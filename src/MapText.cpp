@@ -114,35 +114,17 @@ QRectF MapText::calcPaintRect() const
 	SimpleMapView* map = this->getMapView();
 	if (map != nullptr)
 	{
-		// if no fixed or geo size is set
-		// use the text size
-		if (!this->geoSize().isValid() && !this->fixedSize().isValid() && (!m_text.isNull() && !m_text.isEmpty()))
+		if (!this->size().isValid() && !(m_text.isNull() || m_text.isEmpty()))
 		{
 			const QFontMetricsF fontMetrics(m_font);
 			const QSizeF s = fontMetrics.boundingRect(QRectF(), m_textFlags, m_text).size();
-
-			QPointF p = map->geoCoordinateToScreenPosition(this->position());
-			if (this->alignmentFlags().testFlag(Qt::AlignHCenter))
-			{
-				p.rx() -= s.width() / 2.0;
-			}
-			else if (this->alignmentFlags().testFlag(Qt::AlignRight))
-			{
-				p.rx() -= s.width();
-			}
-
-			if (this->alignmentFlags().testFlag(Qt::AlignVCenter))
-			{
-				p.ry() -= s.height() / 2.0;
-			}
-			else if (this->alignmentFlags().testFlag(Qt::AlignBottom))
-			{
-				p.ry() -= s.height();
-			}
+			QPointF p = this->position().screenPoint(map);
+			
+			this->applyAlignment(p, s);
 
 			return QRectF(p, s) + m_textPadding;
 		}
 	}
 
-	return MapRect::calcPaintRect();
+	return MapRect::calcPaintRect() + m_textPadding;
 }

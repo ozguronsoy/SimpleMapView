@@ -255,20 +255,15 @@ void SimpleMapView::setMarkerIcon(const QImage& icon)
 
 MapImage* SimpleMapView::addMarker(const QGeoCoordinate& position)
 {
-	return this->addMarker(position.latitude(), position.longitude());
-}
-
-MapImage* SimpleMapView::addMarker(qreal latitude, qreal longitude)
-{
 	MapImage* markerIcon = new MapImage(this);
-	markerIcon->setPosition(latitude, longitude);
+	markerIcon->setPosition(position);
 	markerIcon->setAlignmentFlags(Qt::AlignHCenter | Qt::AlignBottom);
 	markerIcon->setImage(m_markerIcon);
-	markerIcon->setFixedSize(48, 48);
+	markerIcon->setSize(QSizeF(48.0, 48.0));
 	markerIcon->setBackgroundColor(Qt::transparent);
 
 	MapText* markerText = new MapText(markerIcon);
-	markerText->setPosition(latitude, longitude);
+	markerText->setPosition(position);
 	markerText->setAlignmentFlags(Qt::AlignHCenter | Qt::AlignBottom);
 	markerText->setBackgroundColor(QColor::fromRgba(0xAF000000));
 	markerText->setBorderRadius(8);
@@ -276,8 +271,9 @@ MapImage* SimpleMapView::addMarker(qreal latitude, qreal longitude)
 
 	auto adjustMarkerTextPosition = [this, markerText, markerIcon]()
 		{
-			QPointF screenPosition = this->geoCoordinateToScreenPosition(markerIcon->position());
-			screenPosition.ry() -= markerIcon->fixedHeight() + markerText->textPadding().bottom() + 5;
+			QPointF screenPosition = markerIcon->position().screenPoint(this);
+			screenPosition.ry() -= markerIcon->size().screenSize(this, screenPosition).height();
+			screenPosition.ry() -= markerText->textPadding().bottom() + 5;
 			markerText->setPosition(this->screenPositionToGeoCoordinate(screenPosition));
 		};
 
@@ -286,6 +282,11 @@ MapImage* SimpleMapView::addMarker(qreal latitude, qreal longitude)
 	adjustMarkerTextPosition();
 
 	return markerIcon;
+}
+
+MapImage* SimpleMapView::addMarker(qreal latitude, qreal longitude)
+{
+	return this->addMarker(QGeoCoordinate(latitude, longitude));
 }
 
 QPointF SimpleMapView::geoCoordinateToTilePosition(qreal latitude, qreal longitude) const

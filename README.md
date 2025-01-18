@@ -120,7 +120,6 @@ mapView->enableMouseWheelZoom();
 mapView->disableMouseMoveMap();
 mapView->enableMouseMoveMap();
 ```
-
 ## Map Items
 
 map items are used for drawing on the map.
@@ -131,15 +130,14 @@ All map items are derived from the ``MapItem`` class.
 ```c++
 MapEllipse* ellipse = new MapEllipse(mapView);
 
+//ellipse->setPosition(QPointF(100, 100));
 ellipse->setPosition(mapView->center());
 ellipse->setAlignmentFlags(Qt::AlignCenter);
+ellipse->setSize(QSizeF(200, 150));
+//ellipse->setSize(QGeoCoordinate(1e-3, 2e-3));
 
 ellipse->setBackgroundColor(QColor::fromRgba(0xAF0000FF));
 ellipse->setPen(QPen(Qt::black, 3));
-
-ellipse->setFixedSize(200, 150); // in pixels, size won't change with zoom and geolocation
-ellipse->setGeoSize(1e-3, 1e-5); // in degrees (longitude, latitude), size will change with zoom and geolocation
-// if fixed size is set, it will be used instead of the geosize
 ```
 
 ### Rect
@@ -150,7 +148,7 @@ ellipse->setGeoSize(1e-3, 1e-5); // in degrees (longitude, latitude), size will 
 MapRect* rect = new MapRect(mapView);
 
 rect->setPosition(mapView->center());
-rect->setFixedSize(200, 150);
+rect->setSize(QSizeF(200, 150));
 
 rect->setBorderRadius(8);
 rect->setBorderRadius(8, 20, 0, 40);
@@ -164,7 +162,7 @@ rect->setBorderRadius(8, 20, 0, 40);
 MapText* text = new MapText(mapView);
 text->setPosition(mapView->center());
 
-// if size is not set (either fixed or geo)
+// if size is not set
 // text size will be used.
 text->setText("Lorem ipsum dolor sit amet.");
 

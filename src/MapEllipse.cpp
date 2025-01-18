@@ -6,8 +6,7 @@ MapEllipse::MapEllipse(QObject* parent)
 	: MapItem(parent),
 	m_alignmentFlags(Qt::AlignTop | Qt::AlignLeft),
 	m_position(),
-	m_geoSize(),
-	m_fixedSize(),
+	m_size(),
 	m_backgroundColor(Qt::black)
 {
 }
@@ -22,128 +21,53 @@ void MapEllipse::setAlignmentFlags(Qt::Alignment f)
 	m_alignmentFlags = f;
 
 	this->repaintMap();
-	
+
 	emit this->changed();
 	emit this->positionChanged();
 }
 
-qreal MapEllipse::latitude() const
-{
-	return m_position.latitude();
-}
-
-void MapEllipse::setLatitude(qreal latitude)
-{
-	this->setPosition(latitude, this->longitude());
-}
-
-qreal MapEllipse::longitude() const
-{
-	return m_position.longitude();
-}
-
-void MapEllipse::setLongitude(qreal longitude)
-{
-	this->setPosition(this->latitude(), longitude);
-}
-
-const QGeoCoordinate& MapEllipse::position() const
+const MapPoint& MapEllipse::position() const
 {
 	return m_position;
 }
 
-void MapEllipse::setPosition(const QGeoCoordinate& position)
+void MapEllipse::setPosition(const QPointF& position)
 {
-	this->setPosition(position.latitude(), position.longitude());
+	this->setPosition(MapPoint(position));
 }
 
-void MapEllipse::setPosition(qreal latitude, qreal longitude)
+void MapEllipse::setPosition(const QGeoCoordinate& position)
 {
-	m_position.setLatitude(std::min(std::max(latitude, -90.0), 90.0));
-	m_position.setLongitude(std::min(std::max(longitude, -180.0), 180.0));
+	this->setPosition(MapPoint(position));
+}
 
+void MapEllipse::setPosition(const MapPoint& position)
+{
+	m_position = position;
 	this->repaintMap();
 
 	emit this->changed();
 	emit this->positionChanged();
 }
 
-qreal MapEllipse::geoWidth() const
+const MapSize& MapEllipse::size() const
 {
-	return m_geoSize.longitude();
+	return m_size;
 }
 
-void MapEllipse::setGeoWidth(qreal w)
+void MapEllipse::setSize(const QSizeF& s)
 {
-	this->setGeoSize(w, this->geoHeight());
+	this->setSize(MapSize(s));
 }
 
-qreal MapEllipse::geoHeight() const
+void MapEllipse::setSize(const QGeoCoordinate& s)
 {
-	return m_geoSize.latitude();
+	this->setSize(MapSize(s));
 }
 
-void MapEllipse::setGeoHeight(qreal h)
+void MapEllipse::setSize(const MapSize& s)
 {
-	this->setGeoSize(this->geoWidth(), h);
-}
-
-const QGeoCoordinate& MapEllipse::geoSize() const
-{
-	return m_geoSize;
-}
-
-void MapEllipse::setGeoSize(const QGeoCoordinate& s)
-{
-	this->setGeoSize(s.longitude(), s.latitude());
-}
-
-void MapEllipse::setGeoSize(qreal w, qreal h)
-{
-	m_geoSize.setLatitude(h);
-	m_geoSize.setLongitude(w);
-
-	this->repaintMap();
-
-	emit this->changed();
-	emit this->sizeChanged();
-}
-
-qreal MapEllipse::fixedWidth() const
-{
-	return m_fixedSize.width();
-}
-
-void MapEllipse::setFixedWidth(qreal w)
-{
-	this->setFixedSize(w, this->fixedHeight());
-}
-
-qreal MapEllipse::fixedHeight() const
-{
-	return m_fixedSize.height();
-}
-
-void MapEllipse::setFixedHeight(qreal h)
-{
-	this->setFixedSize(this->fixedWidth(), h);
-}
-
-
-const QSizeF& MapEllipse::fixedSize() const
-{
-	return m_fixedSize;
-}
-
-void MapEllipse::setFixedSize(const QSizeF& s)
-{
-	this->setFixedSize(s.width(), s.height());
-}
-
-void MapEllipse::setFixedSize(qreal w, qreal h)
-{
-	m_fixedSize.setWidth(w);
-	m_fixedSize.setHeight(h);
+	m_size = s;
 
 	this->repaintMap();
 
@@ -189,36 +113,34 @@ QRectF MapEllipse::calcPaintRect() const
 	SimpleMapView* map = this->getMapView();
 	if (map != nullptr)
 	{
-		QPointF p = map->geoCoordinateToScreenPosition(m_position);
+		QPointF p = m_position.screenPoint(map);
+		const QSizeF s = m_size.screenSize(map, m_position);
 
-		QSizeF s = m_fixedSize;
-		if (s.isNull() || s.isEmpty())
-		{
-			QPointF end = map->geoCoordinateToScreenPosition(m_position.latitude() + m_geoSize.latitude(), m_position.longitude() + m_geoSize.longitude());
-			s = QSizeF(fabs(end.x() - p.x()), fabs(end.y() - p.y()));
-		}
-
-		// apply alignment
-		if (m_alignmentFlags.testFlag(Qt::AlignHCenter))
-		{
-			p.rx() -= s.width() / 2.0;
-		}
-		else if (m_alignmentFlags.testFlag(Qt::AlignRight))
-		{
-			p.rx() -= s.width();
-		}
-
-		if (m_alignmentFlags.testFlag(Qt::AlignVCenter))
-		{
-			p.ry() -= s.height() / 2.0;
-		}
-		else if (m_alignmentFlags.testFlag(Qt::AlignBottom))
-		{
-			p.ry() -= s.height();
-		}
+		this->applyAlignment(p, s);
 
 		return QRectF(p, s);
 	}
 
 	return QRectF();
+}
+
+void MapEllipse::applyAlignment(QPointF& p, const QSizeF& s) const
+{
+	if (m_alignmentFlags.testFlag(Qt::AlignHCenter))
+	{
+		p.rx() -= s.width() / 2.0;
+	}
+	else if (m_alignmentFlags.testFlag(Qt::AlignRight))
+	{
+		p.rx() -= s.width();
+	}
+
+	if (m_alignmentFlags.testFlag(Qt::AlignVCenter))
+	{
+		p.ry() -= s.height() / 2.0;
+	}
+	else if (m_alignmentFlags.testFlag(Qt::AlignBottom))
+	{
+		p.ry() -= s.height();
+	}
 }

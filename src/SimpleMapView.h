@@ -68,8 +68,8 @@ public slots:
 	const QImage& markerIcon() const;
 	void setMarkerIcon(const QImage& icon);
 
-	MapImage* addMarker(const QGeoCoordinate& position = QGeoCoordinate());
 	MapImage* addMarker(qreal latitude, qreal longitude);
+	MapImage* addMarker(const QGeoCoordinate& position = QGeoCoordinate());
 
 	QPointF geoCoordinateToTilePosition(qreal latitude, qreal longitude) const;
 	QPointF geoCoordinateToTilePosition(const QGeoCoordinate& geoCoordinate) const;

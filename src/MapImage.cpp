@@ -77,30 +77,12 @@ QRectF MapImage::calcPaintRect() const
 	SimpleMapView* map = this->getMapView();
 	if (map != nullptr)
 	{
-		// if no fixed or geo size is provided
-		// use the image size
-		if (!this->geoSize().isValid() && !this->fixedSize().isValid() && !m_image.isNull())
+		if (!this->size().isValid() && !m_image.isNull())
 		{
 			const QSizeF s = m_image.size();
+			QPointF p = this->position().screenPoint(map);
 
-			QPointF p = map->geoCoordinateToScreenPosition(this->position());
-			if (this->alignmentFlags().testFlag(Qt::AlignHCenter))
-			{
-				p.rx() -= s.width() / 2.0;
-			}
-			else if (this->alignmentFlags().testFlag(Qt::AlignRight))
-			{
-				p.rx() -= s.width();
-			}
-
-			if (this->alignmentFlags().testFlag(Qt::AlignVCenter))
-			{
-				p.ry() -= s.height() / 2.0;
-			}
-			else if (this->alignmentFlags().testFlag(Qt::AlignBottom))
-			{
-				p.ry() -= s.height();
-			}
+			this->applyAlignment(p, s);
 
 			return QRectF(p, s);
 		}

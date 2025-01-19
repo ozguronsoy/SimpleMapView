@@ -12,12 +12,12 @@
 
 SimpleMapView::SimpleMapView(QWidget* parent)
 	: QWidget(parent),
+	m_zoomLevel(17),
 	m_minZoomLevel(0),
 	m_maxZoomLevel(21),
-	m_zoomLevel(17),
 	m_tileCountPerAxis(1 << m_zoomLevel),
-	m_tileServer(SimpleMapView::TileServers::INVALID),
 	m_center(39.912341799204775, 32.851170267919244),
+	m_tileServer(SimpleMapView::TileServers::INVALID),
 	m_networkManager(this),
 	m_tileSize(256),
 	m_abortingReplies(false),
@@ -25,7 +25,7 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_lockGeolocation(false),
 	m_disableMouseWheelZoom(false),
 	m_disableMouseMoveMap(false),
-	m_markerIcon(":/map_marker.svg")
+	m_markerIcon(":SimpleMapView/marker.svg")
 {
 	this->setTileServer(SimpleMapView::TileServers::OSM);
 }
@@ -566,7 +566,6 @@ void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 
 	if (event->buttons() & Qt::LeftButton)
 	{
-		const QPointF centerTilePosition = this->geoCoordinateToTilePosition(m_center);
 		const QPoint currentMousePosition = event->pos();
 		const QPoint deltaMousePosition = currentMousePosition - m_lastMousePosition;
 
@@ -683,7 +682,7 @@ QPen SimpleMapView::extractBorderPenFromStyleSheet() const
 
 		if (property == "border")
 		{
-			for (const QString s : value.split(" "))
+			for (const QString& s : value.split(" "))
 			{
 				const QColor c = QColor::fromString(s);
 				if (c.isValid())
@@ -714,7 +713,7 @@ QPen SimpleMapView::extractBorderPenFromStyleSheet() const
 
 		if (property == "border")
 		{
-			for (const QString s : value.split(" "))
+			for (const QString& s : value.split(" "))
 			{
 				bool ok = false;
 				const int bw = s.toInt(&ok);
@@ -747,7 +746,7 @@ QPen SimpleMapView::extractBorderPenFromStyleSheet() const
 
 		if (property == "border")
 		{
-			for (const QString s : value.split(" "))
+			for (const QString& s : value.split(" "))
 			{
 				if (s == "solid" || s == "none")
 				{

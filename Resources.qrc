@@ -1,0 +1,6 @@
+﻿<RCC>
+  <qresource prefix="SimpleMapView">
+    <file alias="marker.svg">map_marker.svg</file>
+    <file alias="marker_alt.svg">map_marker_alt.svg</file>
+  </qresource>
+</RCC>

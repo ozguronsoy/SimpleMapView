@@ -22,47 +22,34 @@ A Qt widget for rendering tile maps.
 
 ## Setup
 
-after including the ``.h`` and ``.cpp`` files, add the ``Positioning`` and ``Network`` modules to the build system.
-Then add the marker icons to one of your ``.qrc`` files.
+1. create a folder in your project (e.g., ``dependencies/SimpleMapView``) and copy the repo files to the folder.
+2. include ``SimpleMapView`` in your CMake or qmake file. 
 
-cmake:
+
+CMake:
 ```cmake
-find_package(Qt6 REQUIRED COMPONENTS Network Positioning)
-target_link_libraries(mytarget PRIVATE Qt6::Network Qt6::Positioning)
+set(SIMPLE_MAP_VIEW_ENABLE_RESOURCES ON) # optional
+add_subdirectory(dependencies/SimpleMapView)
+#include(../dependencies/SimpleMapView/CMakeLists.txt) # if not in a subdirectory
+include_directories(dependencies/SimpleMapView/src)
 
 set(PROJECT_SOURCES
+    
     # your files
 
-    SimpleMapView.h
-    SimpleMapView.cpp
-    MapItem.h
-    MapItem.cpp
-    MapEllipse.h
-    MapEllipse.cpp
-    MapRect.h
-    MapRect.cpp
-    MapText.h
-    MapText.cpp
-    MapImage.h
-    MapImage.cpp
+    ${SIMPLE_MAP_VIEW_SOURCES}
 )
 
+target_link_libraries(mytarget PRIVATE 
+    # your libraries
+    ${SIMPLE_MAP_VIEW_LIBRARIES}
+)
 ```
 
-qmake
+qmake:
 ```
-QT += network
-QT += positioning
-```
-
-Resources.qrc
-```xml
-<RCC>
-  <qresource>
-    <file alias="map_marker.svg">path/to/map_marker.svg</file>
-    <file alias="map_marker_alt.svg">path/to/map_marker_alt.svg</file>
-  </qresource>
-</RCC>
+SIMPLE_MAP_VIEW_ENABLE_RESOURCES = 1 
+include(dependencies/SimpleMapView/SimpleMapView.pro)
 ```
 
 ## Map Widget
@@ -144,8 +131,6 @@ ellipse->setPen(QPen(Qt::black, 3));
 
 ### Rect
 
-``MapRect`` derives from ``MapEllipse`` and supports all its features.
-
 ```c++
 MapRect* rect = new MapRect(mapView);
 
@@ -157,8 +142,6 @@ rect->setBorderRadius(8, 20, 0, 40);
 ```
 
 ### Text
-
-``MapText`` derives from ``MapRect`` and supports all its features.
 
 ```c++
 MapText* text = new MapText(mapView);
@@ -176,8 +159,6 @@ text->setTextPadding(10, 10, 10, 10);
 
 
 ### Image
-
-``MapImage`` derives from ``MapRect`` and supports all its features.
 
 ```c++
 MapImage* img = new MapImage(mapView);
@@ -225,6 +206,7 @@ markerIcon->findChild<MapText*>()->setText("Marker Text");
 ```
 
 ### Change Default Marker Icon
+
 ```c++
 mapView->setMarkerIcon(":/map_marker_alt.svg");
 

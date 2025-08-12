@@ -21,12 +21,17 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_networkManager(this),
 	m_tileSize(256),
 	m_abortingReplies(false),
+	m_tileServerTimer(this),
+	m_backupTileServerIndex(0),
 	m_lockZoom(false),
 	m_lockGeolocation(false),
 	m_disableMouseWheelZoom(false),
 	m_disableMouseMoveMap(false),
 	m_markerIcon(":SimpleMapView/marker.svg")
 {
+	m_tileServerTimer.setInterval(SimpleMapView::TILE_SERVER_TIMER_INTERVAL_MS);
+	(void)m_tileServerTimer.connect(&m_tileServerTimer, &QTimer::timeout, this, &SimpleMapView::checkTileServers);
+
 	this->setTileServer(SimpleMapView::TileServers::OSM);
 }
 
@@ -149,38 +154,75 @@ const QString& SimpleMapView::tileServer() const
 
 void SimpleMapView::setTileServer(const QString& tileServer)
 {
-	if (tileServer == m_tileServer) return;
-
 	QNetworkRequest request(this->formatTileServerUrl(tileServer, QPoint(0, 0), 0));
 	request.setRawHeader("User-Agent", "Qt/SimpleMapView");
 	request.setTransferTimeout(5000);
 
 	QNetworkReply* reply = m_networkManager.get(request);
 
-	QEventLoop eventLoop;
-	(void)this->connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
-	(void)eventLoop.exec();
+	(void)this->connect(reply, &QNetworkReply::finished, this,
+		[this, reply, tileServer]()
+		{
+			if (reply->error() == QNetworkReply::NoError)
+			{
+				const QString oldTileServer = m_tileServer;
 
-	if (reply->error() == QNetworkReply::NoError)
-	{
-		this->abortReplies();
-		m_tileMap.clear();
+				this->abortReplies();
+				m_tileMap.clear();
 
-		QImage tileImage;
-		tileImage.loadFromData(reply->readAll());
-		m_tileSize = tileImage.width();
-		m_tileServer = tileServer;
+				QImage tileImage;
+				tileImage.loadFromData(reply->readAll());
+				m_tileSize = tileImage.width();
+				m_tileServer = tileServer;
 
-		this->updateMap();
-		emit this->tileServerChanged();
-	}
-	else
-	{
-		qDebug() << "[SimpleMapView]" << reply->errorString();
-		qDebug() << "[SimpleMapView]" << "failed to set the tile server to" << tileServer;
-	}
+				auto it = std::remove_if(m_backupTileServers.begin(), m_backupTileServers.end(),
+					[tileServer](const QString& backupServer) { return backupServer == tileServer; });
+				(void)m_backupTileServers.erase(it, m_backupTileServers.end());
+				if (oldTileServer != SimpleMapView::TileServers::INVALID)
+				{
+					m_backupTileServers.push_back(oldTileServer);
+				}
 
-	reply->deleteLater();
+				this->updateMap();
+				emit this->tileServerChanged();
+				reply->deleteLater();
+			}
+			else
+			{
+				qDebug() << "[SimpleMapView]" << reply->errorString();
+				qDebug() << "[SimpleMapView]" << "failed to set the tile server to" << tileServer;
+				reply->deleteLater();
+				m_tileServerTimer.start();
+			}
+		}
+	);
+}
+
+void SimpleMapView::setTileServer(const std::vector<QString>& tileServers)
+{
+	(void)m_backupTileServers.insert(m_backupTileServers.begin(), tileServers.begin(), tileServers.end());
+	m_backupTileServerIndex = 1;
+	m_tileServerTimer.start();
+}
+
+const std::vector<QString>& SimpleMapView::backupTileServers() const
+{
+	return m_backupTileServers;
+}
+
+void SimpleMapView::addBackupTileServer(const QString& tileServer)
+{
+	(void)m_backupTileServers.insert(m_backupTileServers.end(), tileServer);
+}
+
+void SimpleMapView::addBackupTileServer(const std::vector<QString>& tileServers)
+{
+	(void)m_backupTileServers.insert(m_backupTileServers.end(), tileServers.begin(), tileServers.end());
+}
+
+void SimpleMapView::clearBackupTileServers()
+{
+	m_backupTileServers.clear();
 }
 
 bool SimpleMapView::isZoomLocked() const
@@ -450,6 +492,11 @@ void SimpleMapView::fetchTile(const QPoint& tilePosition)
 			else
 			{
 				qDebug() << "[SimpleMapView]" << reply->errorString();
+				if (!m_abortingReplies)
+				{
+					m_backupTileServerIndex = 0;
+					m_tileServerTimer.start();
+				}
 			}
 
 			reply->deleteLater();
@@ -582,6 +629,36 @@ void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 
 		m_lastMousePosition = currentMousePosition;
 	}
+}
+
+void SimpleMapView::checkTileServers()
+{
+	m_tileServerTimer.stop();
+
+	if (m_backupTileServerIndex > m_backupTileServers.size())
+		m_backupTileServerIndex = 0;
+
+	if (m_backupTileServerIndex == 0)
+	{
+		if (m_tileServer != SimpleMapView::TileServers::INVALID)
+		{
+			this->setTileServer(m_tileServer);
+		}
+		else
+		{
+			m_backupTileServerIndex++;
+		}
+	}
+
+	if (m_backupTileServers.size() > 0)
+	{
+		if (m_backupTileServerIndex > 0)
+		{
+			this->setTileServer(m_backupTileServers[m_backupTileServerIndex - 1]);
+		}
+	}
+
+	m_backupTileServerIndex++;
 }
 
 QPainterPath SimpleMapView::calcPaintClipRegion() const

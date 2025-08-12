@@ -65,7 +65,7 @@ public slots:
 	/** Gets the used tile server. */
 	const QString& tileServer() const;
 	/** Sets the tile server. */
-	void setTileServer(const QString& tileServer);
+	void setTileServer(const QString& tileServer, bool wait = true);
 	/** Sets the first available tile server and adds the remaining as backup. */
 	void setTileServer(const std::vector<QString>& tileServers);
 
@@ -115,6 +115,17 @@ public slots:
 	MapImage* addMarker(qreal latitude, qreal longitude);
 	/** Adds a new marker to the map at the provided geolocation. */
 	MapImage* addMarker(const QGeoCoordinate& position = QGeoCoordinate());
+
+	/**
+	 * Downloads tiles and saves them for offline use.
+	 * 
+	 * @param path Path to save the tiles.
+	 * @param p1 First geocoordinate of the rectangular region.
+	 * @param p2 Second geocoordinate of the rectangular region.
+	 * @param z1 First zoom level.
+	 * @param z2 Second zoom level.
+	 */
+	void downloadTiles(const QString& path, const QGeoCoordinate& p1, const QGeoCoordinate& p2, int z1, int z2);
 
 	/** Converts the geocoordinates to tile position used in the tile servers. */
 	QPointF geoCoordinateToTilePosition(qreal latitude, qreal longitude) const;

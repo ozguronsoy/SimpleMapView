@@ -6,9 +6,13 @@
 #include <QPainterPath>
 #include <QColor>
 #include <QWheelEvent>
+#include <QDirIterator>
+#include <QImageReader>
 #include <QProgressBar>
 #include <QDir>
 #include <QFile>
+#include <QTextStream>
+#include <QMetaObject>
 #include <QDebug>
 
 #define GET_IN_RANGE(v, minv, maxv) (std::min(std::max((v), (minv)), (maxv)))
@@ -21,6 +25,7 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_tileCountPerAxis(1 << m_zoomLevel),
 	m_center(39.912341799204775, 32.851170267919244),
 	m_tileServer(SimpleMapView::TileServers::INVALID),
+	m_tileServerSource(SimpleMapView::TileServerSource::Invalid),
 	m_networkManager(this),
 	m_tileSize(256),
 	m_abortingReplies(false),
@@ -157,56 +162,88 @@ const QString& SimpleMapView::tileServer() const
 
 void SimpleMapView::setTileServer(const QString& tileServer, bool wait)
 {
-	QNetworkRequest request(this->formatTileServerUrl(tileServer, QPoint(0, 0), 0));
-	request.setRawHeader("User-Agent", "Qt/SimpleMapView");
-	request.setTransferTimeout(5000);
-
-	QNetworkReply* reply = m_networkManager.get(request);
-	auto handleResponse = [this, reply, tileServer]()
+	auto changeTileServer = [this, tileServer](int tileSize)
 		{
-			if (reply->error() == QNetworkReply::NoError)
+			const QString oldTileServer = m_tileServer;
+
+			this->abortReplies();
+			m_tileMap.clear();
+
+			m_tileSize = tileSize;
+			m_tileServer = tileServer;
+
+			auto it = std::remove_if(m_backupTileServers.begin(), m_backupTileServers.end(),
+				[tileServer](const QString& backupServer) { return backupServer == tileServer; });
+			(void)m_backupTileServers.erase(it, m_backupTileServers.end());
+			if (oldTileServer != SimpleMapView::TileServers::INVALID)
 			{
-				const QString oldTileServer = m_tileServer;
-
-				this->abortReplies();
-				m_tileMap.clear();
-
-				QImage tileImage;
-				tileImage.loadFromData(reply->readAll());
-				m_tileSize = tileImage.width();
-				m_tileServer = tileServer;
-
-				auto it = std::remove_if(m_backupTileServers.begin(), m_backupTileServers.end(),
-					[tileServer](const QString& backupServer) { return backupServer == tileServer; });
-				(void)m_backupTileServers.erase(it, m_backupTileServers.end());
-				if (oldTileServer != SimpleMapView::TileServers::INVALID)
-				{
-					m_backupTileServers.push_back(oldTileServer);
-				}
-
-				this->updateMap();
-				emit this->tileServerChanged();
-				reply->deleteLater();
-			}
-			else
-			{
-				qDebug() << "[SimpleMapView]" << reply->errorString();
-				qDebug() << "[SimpleMapView]" << "failed to set the tile server to" << tileServer;
-				reply->deleteLater();
-				m_tileServerTimer.start();
+				m_backupTileServers.push_back(oldTileServer);
 			}
 		};
 
-	if (wait)
+	if (tileServer.startsWith("http"))
 	{
-		QEventLoop eventLoop;
-		(void)this->connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
-		(void)eventLoop.exec();
-		handleResponse();
+		QNetworkRequest request(this->formatTileServerUrlString(tileServer, QPoint(0, 0), 0));
+		request.setRawHeader("User-Agent", "Qt/SimpleMapView");
+		request.setTransferTimeout(5000);
+
+		QNetworkReply* reply = m_networkManager.get(request);
+		auto handleResponse = [this, tileServer, changeTileServer, reply]()
+			{
+				if (reply->error() == QNetworkReply::NoError)
+				{
+					QImage tileImage;
+					tileImage.loadFromData(reply->readAll());
+					changeTileServer(tileImage.width());
+					m_tileServerSource = SimpleMapView::TileServerSource::Remote;
+
+					this->updateMap();
+					emit this->tileServerChanged();
+
+					reply->deleteLater();
+				}
+				else
+				{
+					qDebug() << "[SimpleMapView]" << reply->errorString();
+					qDebug() << "[SimpleMapView]" << "failed to set the tile server to" << tileServer;
+					reply->deleteLater();
+					m_tileServerTimer.start();
+				}
+			};
+
+		if (wait)
+		{
+			QEventLoop eventLoop;
+			(void)this->connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
+			(void)eventLoop.exec();
+			handleResponse();
+		}
+		else
+		{
+			(void)this->connect(reply, &QNetworkReply::finished, this, handleResponse);
+		}
 	}
 	else
 	{
-		(void)this->connect(reply, &QNetworkReply::finished, this, handleResponse);
+		int tileSize = 0;
+		QDirIterator dirIterator(tileServer, { "*.png" }, QDir::Files, QDirIterator::Subdirectories);
+		if (dirIterator.hasNext())
+		{
+			const QString pngPath = dirIterator.next();
+			const QImageReader reader(pngPath);
+			tileSize = reader.size().width();
+		}
+		changeTileServer(tileSize);
+		m_tileServerSource = (tileServer.startsWith(":")) ? (SimpleMapView::TileServerSource::Resource) : (SimpleMapView::TileServerSource::Local);
+
+
+		QDir path(m_tileServer);
+		path = QDir(path.filePath("{z}"));
+		path = QDir(path.filePath("{x}"));
+		m_tileServer = path.filePath("{y}.png");
+
+		this->updateMap();
+		emit this->tileServerChanged();
 	}
 }
 
@@ -227,6 +264,11 @@ void SimpleMapView::setTileServer(const std::vector<QString>& tileServers)
 			}
 		}
 	}
+}
+
+SimpleMapView::TileServerSource SimpleMapView::tileServerSource() const
+{
+	return m_tileServerSource;
 }
 
 const std::vector<QString>& SimpleMapView::backupTileServers() const
@@ -365,9 +407,6 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 		return;
 	}
 
-	constexpr size_t maxConcurrentRequestCount = 10;
-	std::shared_ptr<size_t> currentRequestCount(new size_t(0));
-
 	int z = std::min(z1, z2);
 	const int z_end = std::max(z1, z2);
 	const int originalZ = m_zoomLevel;
@@ -381,15 +420,6 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 			return;
 		}
 	}
-
-	// shared so they won't be deleted when the function returns.
-	std::shared_ptr<size_t> downloadedTileCount(new size_t(0));
-	std::shared_ptr<QProgressBar> progressBar(new QProgressBar(nullptr));
-	progressBar->setWindowTitle("Downloading Tiles");
-	progressBar->resize(300, 200);
-	progressBar->setRange(0, 100);
-	progressBar->setValue(0);
-	progressBar->show();
 
 	// calculate the number of tiles to download
 	size_t nTilesToDownload = 0;
@@ -410,6 +440,34 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 		z++;
 	} while (z <= z_end);
 	z = std::min(z1, z2);
+
+	// shared so they won't be deleted when the function returns.
+	std::shared_ptr<QFile> qrcFile(new QFile(dir.filePath("Tiles.qrc")));
+	std::shared_ptr<QTextStream> qrcTextStream;
+	if (!qrcFile->open(QIODevice::WriteOnly | QIODevice::Text))
+	{
+		qrcFile = nullptr;
+		qrcTextStream = nullptr;
+	}
+	else
+	{
+		qrcTextStream = std::make_shared<QTextStream>(qrcFile.get());
+	}
+
+	if (qrcFile != nullptr)
+	{
+		(*qrcTextStream) << "<RCC>\n";
+		(*qrcTextStream) << "\t<qresource prefix=\"/SimpleMapView/Tiles\">\n";
+	}
+
+	std::shared_ptr<size_t> currentRequestCount(new size_t(0));
+	std::shared_ptr<size_t> downloadedTileCount(new size_t(0));
+	std::shared_ptr<QProgressBar> progressBar(new QProgressBar(nullptr));
+	progressBar->setWindowTitle("Downloading Tiles");
+	progressBar->resize(300, 200);
+	progressBar->setRange(0, nTilesToDownload);
+	progressBar->setValue(0);
+	progressBar->show();
 
 	std::shared_ptr<std::function<void(size_t, size_t, int)>> downloadNextTile = std::make_shared<std::function<void(size_t, size_t, int)>>();
 
@@ -451,7 +509,7 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 		};
 
 	(*downloadNextTile) =
-		[this, downloadNextTile, increaseTilePosition, x_next, y_next, z_next, p1, p2, x_start, y_start, x_end, y_end, z_end, currentRequestCount, originalZ, dir, progressBar, downloadedTileCount, nTilesToDownload](size_t x, size_t y, int z)
+		[this, downloadNextTile, increaseTilePosition, qrcFile, qrcTextStream, x_next, y_next, z_next, p1, p2, x_start, y_start, x_end, y_end, z_end, currentRequestCount, originalZ, dir, progressBar, downloadedTileCount](size_t x, size_t y, int z)
 		{
 			++(*currentRequestCount);
 
@@ -468,14 +526,14 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 			if (this->validateTilePosition(tilePosition) &&
 				!QFile::exists(tilePath))
 			{
-				QNetworkRequest request(this->formatTileServerUrl(m_tileServer, tilePosition, m_zoomLevel));
+				QNetworkRequest request(this->formatTileServerUrlString(m_tileServer, tilePosition, m_zoomLevel));
 				request.setRawHeader("User-Agent", "Qt/SimpleMapView");
 				request.setTransferTimeout(5000);
 
 				QNetworkReply* reply = m_networkManager.get(request);
 
 				(void)this->connect(reply, &QNetworkReply::finished, this,
-					[this, downloadNextTile, increaseTilePosition, x_next, y_next, z_next, p1, p2, x_start, y_start, x_end, y_end, z_end, originalZ, currentRequestCount, progressBar, downloadedTileCount, nTilesToDownload, reply, x, y, z, tilePath]()
+					[this, downloadNextTile, increaseTilePosition, qrcFile, qrcTextStream, x_next, y_next, z_next, p1, p2, x_start, y_start, x_end, y_end, z_end, currentRequestCount, originalZ, dir, progressBar, downloadedTileCount, reply, x, y, z, tilePath]()
 					{
 						if (reply->error() == QNetworkReply::NoError)
 						{
@@ -485,6 +543,10 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 							{
 								qDebug() << "[SimpleMapView]" << QString("Failed to save the tile z:%1 x:%2 y:%3").arg(z).arg(x).arg(y);
 							}
+							else
+							{
+								(*qrcTextStream) << QString("\t\t<file alias=\"/%1/%2/%3.png\">%1/%2/%3.png</file>\n").arg(z).arg(x).arg(y);
+							}
 						}
 						else
 						{
@@ -492,21 +554,51 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 						}
 
 						(*downloadedTileCount)++;
-						progressBar->setValue((((float)*downloadedTileCount) / ((float)nTilesToDownload)) * 100);
+						progressBar->setValue(*downloadedTileCount);
 
 						(*currentRequestCount)--;
-
 						(*downloadNextTile)(*x_next, *y_next, *z_next);
 						increaseTilePosition();
 						if (*(z_next) > z_end)
 						{
 							reply->deleteLater();
 							this->setZoomLevel(originalZ);
+
+							(*qrcTextStream) << "\t</qresource>\n";
+							(*qrcTextStream) << "</RCC>\n";
+							qrcFile->close();
+
 							return;
 						}
 
 						reply->deleteLater();
 					}
+				);
+			}
+			else
+			{
+				// execute after the current event loop iteration finishes
+				(void)QMetaObject::invokeMethod(this,
+					[this, downloadNextTile, increaseTilePosition, qrcFile, qrcTextStream, x_next, y_next, z_next, z_end, originalZ, currentRequestCount, dir, progressBar, downloadedTileCount]()
+					{
+						(*downloadedTileCount)++;
+						progressBar->setValue(*downloadedTileCount);
+
+						(*currentRequestCount)--;
+						(*downloadNextTile)(*x_next, *y_next, *z_next);
+						increaseTilePosition();
+						if (*(z_next) > z_end)
+						{
+							this->setZoomLevel(originalZ);
+
+							(*qrcTextStream) << "\t</qresource>\n";
+							(*qrcTextStream) << "</RCC>\n";
+							qrcFile->close();
+
+							return;
+						}
+					},
+					Qt::QueuedConnection
 				);
 			}
 		};
@@ -527,9 +619,9 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 		(*y_next) = (*y_start);
 		(*z_next) = z;
 
-		for (size_t x = std::max(*x_start, 0); x <= (*x_end) && (*currentRequestCount) < maxConcurrentRequestCount; ++x)
+		for (size_t x = std::max(*x_start, 0); x <= (*x_end) && (*currentRequestCount) < SimpleMapView::DOWNLOAD_MAX_CONCURRENT_REQUEST_COUNT; ++x)
 		{
-			for (size_t y = std::max(*y_start, 0); y <= (*y_end) && (*currentRequestCount) < maxConcurrentRequestCount; ++y)
+			for (size_t y = std::max(*y_start, 0); y <= (*y_end) && (*currentRequestCount) < SimpleMapView::DOWNLOAD_MAX_CONCURRENT_REQUEST_COUNT; ++y)
 			{
 				(*downloadNextTile)(x, y, z);
 				increaseTilePosition();
@@ -537,7 +629,7 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 		}
 
 		z++;
-	} while (z <= z_end && (*currentRequestCount) < maxConcurrentRequestCount);
+	} while (z <= z_end && (*currentRequestCount) < SimpleMapView::DOWNLOAD_MAX_CONCURRENT_REQUEST_COUNT);
 }
 
 QPointF SimpleMapView::geoCoordinateToTilePosition(qreal latitude, qreal longitude) const
@@ -635,17 +727,17 @@ QPoint SimpleMapView::getTilePosition(const QString& tileKey, int* outZoomLevel)
 	return QPoint(splitKey[0].toInt(), splitKey[1].toInt());
 }
 
-QUrl SimpleMapView::formatTileServerUrl(QString tileServerUrl, const QPoint& tilePosition, int zoomLevel) const
+QString SimpleMapView::formatTileServerUrlString(QString tileServerUrl, const QPoint& tilePosition, int zoomLevel) const
 {
 	tileServerUrl.replace("{x}", QString::number(tilePosition.x()));
 	tileServerUrl.replace("{y}", QString::number(tilePosition.y()));
 	tileServerUrl.replace("{z}", QString::number(zoomLevel));
-	return QUrl(tileServerUrl);
+	return tileServerUrl;
 }
 
 void SimpleMapView::updateMap()
 {
-	if (m_tileServer == SimpleMapView::TileServers::INVALID) return;
+	if (m_tileServer == SimpleMapView::TileServers::INVALID || m_tileServerSource == SimpleMapView::TileServerSource::Invalid) return;
 
 	const QPoint requiredTileCount = this->calcRequiredTileCount();
 	const QPointF centerTilePosition = this->geoCoordinateToTilePosition(m_center);
@@ -672,14 +764,31 @@ void SimpleMapView::updateMap()
 			}
 		}
 	}
-	if (noNewTiles) this->repaint();
+	if (noNewTiles || m_tileServerSource != SimpleMapView::TileServerSource::Remote) this->repaint();
 }
 
 void SimpleMapView::fetchTile(const QPoint& tilePosition)
 {
 	if (m_tileServer == SimpleMapView::TileServers::INVALID) return;
+	switch (m_tileServerSource)
+	{
+	case SimpleMapView::TileServerSource::Remote:
+		this->fetchTileFromRemote(tilePosition);
+		break;
+	case SimpleMapView::TileServerSource::Local:
+		this->fetchTileFromLocal(tilePosition);
+		break;
+	case SimpleMapView::TileServerSource::Resource:
+		this->fetchTileFromResource(tilePosition);
+		break;
+	default:
+		break;
+	}
+}
 
-	QNetworkRequest request(this->formatTileServerUrl(m_tileServer, tilePosition, m_zoomLevel));
+void SimpleMapView::fetchTileFromRemote(const QPoint& tilePosition)
+{
+	QNetworkRequest request(this->formatTileServerUrlString(m_tileServer, tilePosition, m_zoomLevel));
 	request.setRawHeader("User-Agent", "Qt/SimpleMapView");
 	request.setTransferTimeout(5000);
 
@@ -720,6 +829,26 @@ void SimpleMapView::fetchTile(const QPoint& tilePosition)
 			}
 		}
 	);
+}
+
+void SimpleMapView::fetchTileFromLocal(const QPoint& tilePosition)
+{
+	const QString tilePath = this->formatTileServerUrlString(m_tileServer, tilePosition, m_zoomLevel);
+	if (QFile::exists(tilePath))
+	{
+		const QString tileKey = this->getTileKey(tilePosition);
+
+		std::unique_ptr<QImage> tileImage = std::make_unique<QImage>();
+		tileImage->load(tilePath);
+
+		m_tileSize = tileImage->width();
+		m_tileMap[tileKey] = std::move(tileImage);
+	}
+}
+
+void SimpleMapView::fetchTileFromResource(const QPoint& tilePosition)
+{
+	this->fetchTileFromLocal(tilePosition);
 }
 
 void SimpleMapView::abortReplies()

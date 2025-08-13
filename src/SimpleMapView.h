@@ -24,6 +24,20 @@ class SimpleMapView : public QWidget
 	Q_OBJECT
 
 public:
+	/** Represents the source location from which map tiles are loaded. */
+	enum class TileServerSource
+	{
+		/** Invalid source. */
+		Invalid,
+		/** Tiles are fetched from a remote server during run-time. */
+		Remote,
+		/** Tiles are fetched from the local file system. */
+		Local,
+		/** Tiles are fetched from the qrc resources embedded into the executable. */
+		Resource
+	};
+
+public:
 	explicit SimpleMapView(QWidget* parent = nullptr);
 	~SimpleMapView() = default;
 
@@ -68,6 +82,8 @@ public slots:
 	void setTileServer(const QString& tileServer, bool wait = true);
 	/** Sets the first available tile server and adds the remaining as backup. */
 	void setTileServer(const std::vector<QString>& tileServers);
+	/** Gets the tile server source. */
+	TileServerSource tileServerSource() const;
 
 	/** Gets the backup server list. */
 	const std::vector<QString>& backupTileServers() const;
@@ -165,13 +181,19 @@ protected:
 	virtual QString getTileKey(const QPoint& tilePosition) const;
 	/** Converts tile key to tile position. */
 	virtual QPoint getTilePosition(const QString& tileKey, int* outZoomLevel = nullptr) const;
-	/** Creates a valid tile server URL. */
-	virtual QUrl formatTileServerUrl(QString tileServerUrl, const QPoint& tilePosition, int zoomLevel) const;
+	/** Creates a valid tile server URL string. */
+	virtual QString formatTileServerUrlString(QString tileServerUrl, const QPoint& tilePosition, int zoomLevel) const;
 
 	/** Fetches the required tiles from the server and updates the display. */
 	void updateMap();
 	/** Fetches the tile from the server. */
 	void fetchTile(const QPoint& tilePosition);
+	/** Fetches the tile from the remote server. */
+	void fetchTileFromRemote(const QPoint& tilePosition);
+	/** Fetches the tile from the local file system. */
+	void fetchTileFromLocal(const QPoint& tilePosition);
+	/** Fetches the tile from the qrc resources. */
+	void fetchTileFromResource(const QPoint& tilePosition);
 	/** Aborts all ongoing requests and drops the replies. */
 	void abortReplies();
 
@@ -199,6 +221,7 @@ private:
 	QGeoCoordinate m_center;
 
 	QString m_tileServer;
+	TileServerSource m_tileServerSource;
 	QNetworkAccessManager m_networkManager;
 	int m_tileSize;
 	bool m_abortingReplies;
@@ -220,6 +243,7 @@ private:
 	std::unordered_map<QString, std::unique_ptr<QImage>> m_tileMap;
 
 	static constexpr unsigned int TILE_SERVER_TIMER_INTERVAL_MS = 100;
+	static constexpr unsigned int DOWNLOAD_MAX_CONCURRENT_REQUEST_COUNT = 10;
 
 public:
 	class TileServers

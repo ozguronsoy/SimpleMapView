@@ -2,25 +2,34 @@
 #define MAP_LINES_H
 
 #include "SimpleMapView/MapItem.h"
-#include <vector>
+#include <QVector>
 
+/**
+ * @brief Class for drawing lines on map.
+ */
 class MapLines : public MapItem
 {
-	Q_OBJECT
+	Q_OBJECT;
+	Q_PROPERTY(QVector<MapPoint> points READ points WRITE setPoints);
 
 public:
 	explicit MapLines(QObject* parent = nullptr);
 
-	std::vector<MapPoint>& points();
-	const std::vector<MapPoint>& points() const;
+	/** Gets the points. */
+	QVector<MapPoint>& points();
+	/** Gets the points. */
+	const QVector<MapPoint>& points() const;
+	/** Sets the points. */
+	void setPoints(const QVector<MapPoint>& points);
 
 	virtual void paint(QPainter& painter) const override;
 
 protected:
-	std::vector<QPointF> getScreenPoints() const;
+	/** Gets the points as screen points (in px). */
+	QVector<QPointF> getScreenPoints() const;
 
 private:
-	std::vector<MapPoint> m_points;
+	QVector<MapPoint> m_points;
 };
 
 #endif

@@ -7,59 +7,58 @@ MapPoint::MapPoint()
 }
 
 MapPoint::MapPoint(const QPointF& screenPoint)
-	: QVariant(screenPoint)
 {
+	m_val.setValue(screenPoint);
 }
 
 MapPoint::MapPoint(const QGeoCoordinate& geoPoint)
-	: QVariant()
 {
-	this->setValue(geoPoint);
+	m_val.setValue(geoPoint);
 }
 
 MapPoint& MapPoint::operator=(const QPointF& screenPoint) 
 {
-	this->setValue(screenPoint);
+	m_val.setValue(screenPoint);
 	return *this;
 }
 
 MapPoint& MapPoint::operator=(const QGeoCoordinate& geoPoint) 
 {
-	this->setValue(geoPoint);
+	m_val.setValue(geoPoint);
 	return *this;
 }
 
 bool MapPoint::isValid() const
 {
-	if (this->canConvert<QPointF>())
-		return !this->value<QPointF>().isNull();
-	return this->value<QGeoCoordinate>().isValid();
+	if (m_val.canConvert<QPointF>())
+		return !m_val.value<QPointF>().isNull();
+	return m_val.value<QGeoCoordinate>().isValid();
 }
 
 QPointF MapPoint::screenPoint(const SimpleMapView* map) const
 {
-	if (this->canConvert<QPointF>())
+	if (m_val.canConvert<QPointF>())
 	{
-		return this->value<QPointF>();
+		return m_val.value<QPointF>();
 	}
 
 	if (map != nullptr)
 	{
-		return map->geoCoordinateToScreenPosition(this->value<QGeoCoordinate>());
+		return map->geoCoordinateToScreenPosition(m_val.value<QGeoCoordinate>());
 	}
 	return QPointF();
 }
 
 QGeoCoordinate MapPoint::geoPoint(const SimpleMapView* map) const
 {
-	if (this->canConvert<QGeoCoordinate>())
+	if (m_val.canConvert<QGeoCoordinate>())
 	{
-		return this->value<QGeoCoordinate>();
+		return m_val.value<QGeoCoordinate>();
 	}
 
 	if (map != nullptr)
 	{
-		return map->screenPositionToGeoCoordinate(this->value<QPointF>());
+		return map->screenPositionToGeoCoordinate(m_val.value<QPointF>());
 	}
 	return QGeoCoordinate();
 }
@@ -70,47 +69,46 @@ MapSize::MapSize()
 }
 
 MapSize::MapSize(const QSizeF& screenSize)
-	: QVariant(screenSize)
 {
+	m_val.setValue(screenSize);
 }
 
 MapSize::MapSize(const QGeoCoordinate& geoSize)
-	: QVariant()
 {
-	this->setValue(geoSize);
+	m_val.setValue(geoSize);
 }
 
 MapSize& MapSize::operator=(const QPointF& screenSize) 
 {
-	this->setValue(screenSize);
+	m_val.setValue(screenSize);
 	return *this;
 }
 
 MapSize& MapSize::operator=(const QGeoCoordinate& geoSize) 
 {
-	this->setValue(geoSize);
+	m_val.setValue(geoSize);
 	return *this;
 }
 
 bool MapSize::isValid() const
 {
-	if (this->canConvert<QSizeF>())
-		return this->value<QSizeF>().isValid();
-	return this->value<QGeoCoordinate>().isValid();
+	if (m_val.canConvert<QSizeF>())
+		return m_val.value<QSizeF>().isValid();
+	return m_val.value<QGeoCoordinate>().isValid();
 }
 
 QSizeF MapSize::screenSize(const SimpleMapView* map, const MapPoint& topLeft) const
 {
-	if (this->canConvert<QSizeF>())
+	if (m_val.canConvert<QSizeF>())
 	{
-		return this->value<QSizeF>();
+		return m_val.value<QSizeF>();
 	}
 
 	if (map != nullptr)
 	{
 		QGeoCoordinate geoPoint = topLeft.geoPoint(map);
-		geoPoint.setLatitude(geoPoint.latitude() + this->value<QGeoCoordinate>().latitude());
-		geoPoint.setLongitude(geoPoint.longitude() + this->value<QGeoCoordinate>().longitude());
+		geoPoint.setLatitude(geoPoint.latitude() + m_val.value<QGeoCoordinate>().latitude());
+		geoPoint.setLongitude(geoPoint.longitude() + m_val.value<QGeoCoordinate>().longitude());
 
 		const QPointF result = map->geoCoordinateToScreenPosition(geoPoint) - topLeft.screenPoint(map);
 		return QSizeF(result.x(), result.y());
@@ -120,17 +118,17 @@ QSizeF MapSize::screenSize(const SimpleMapView* map, const MapPoint& topLeft) co
 
 QGeoCoordinate MapSize::geoSize(const SimpleMapView* map, const MapPoint& topLeft) const
 {
-	if (this->canConvert<QGeoCoordinate>())
+	if (m_val.canConvert<QGeoCoordinate>())
 	{
-		return this->value<QGeoCoordinate>();
+		return m_val.value<QGeoCoordinate>();
 	}
 
 	if (map != nullptr)
 	{
 		const QPointF topLeftScreenPoint = topLeft.screenPoint(map);
 		const QPointF screenPoint = QPointF(
-			(topLeftScreenPoint.x() + this->value<QSizeF>().width()),
-			(topLeftScreenPoint.y() + this->value<QSizeF>().height())
+			(topLeftScreenPoint.x() + m_val.value<QSizeF>().width()),
+			(topLeftScreenPoint.y() + m_val.value<QSizeF>().height())
 		);
 
 		return map->screenPositionToGeoCoordinate(screenPoint);
@@ -157,6 +155,36 @@ void MapItem::setPen(const QPen& pen)
 
 	emit this->changed();
 	emit this->penChanged();
+}
+
+QColor MapItem::penColor() const
+{
+	return m_pen.color();
+}
+
+void MapItem::setPenColor(const QColor& color)
+{
+	m_pen.setColor(color);
+}
+
+qreal MapItem::penWidth() const
+{
+	return m_pen.widthF();
+}
+
+void MapItem::setPenWidth(qreal width)
+{
+	m_pen.setWidthF(width);
+}
+
+Qt::PenStyle MapItem::penStyle() const
+{
+	return m_pen.style();
+}
+
+void MapItem::setPenStyle(Qt::PenStyle style)
+{
+	m_pen.setStyle(style);
 }
 
 SimpleMapView* MapItem::getMapView() const

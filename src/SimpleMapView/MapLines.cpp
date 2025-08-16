@@ -8,21 +8,26 @@ MapLines::MapLines(QObject* parent)
 	this->setPen(QPen(this->pen().color(), 1));
 }
 
-std::vector<MapPoint>& MapLines::points()
+QVector<MapPoint>& MapLines::points()
 {
 	this->repaintMap();
 	return m_points;
 }
 
-const std::vector<MapPoint>& MapLines::points() const
+const QVector<MapPoint>& MapLines::points() const
 {
 	return m_points;
 }
 
-std::vector<QPointF> MapLines::getScreenPoints() const
+void MapLines::setPoints(const QVector<MapPoint>& points)
+{
+	m_points = points;
+}
+
+QVector<QPointF> MapLines::getScreenPoints() const
 {
 	SimpleMapView* map = this->getMapView();
-	std::vector<QPointF> screenPoints;
+	QVector<QPointF> screenPoints;
 
 	if (map != nullptr)
 	{
@@ -43,7 +48,7 @@ void MapLines::paint(QPainter& painter) const
 	if (map != nullptr)
 	{
 		painter.setPen(this->pen());
-		const std::vector<QPointF> screenPoints = this->getScreenPoints();
+		const QVector<QPointF> screenPoints = this->getScreenPoints();
 		painter.drawLines(&screenPoints[0], screenPoints.size() / 2);
 	}
 }

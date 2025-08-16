@@ -247,7 +247,7 @@ void SimpleMapView::setTileServer(const QString& tileServer, bool wait)
 	}
 }
 
-void SimpleMapView::setTileServer(const std::vector<QString>& tileServers)
+void SimpleMapView::setTileServer(const QVector<QString>& tileServers)
 {
 	for (size_t i = 0; i < tileServers.size(); ++i)
 	{
@@ -257,7 +257,7 @@ void SimpleMapView::setTileServer(const std::vector<QString>& tileServers)
 			this->setTileServer(tileServer);
 			if (m_tileServer == tileServer)
 			{
-				std::vector<QString> backupServers = tileServers;
+				QVector<QString> backupServers = tileServers;
 				(void)backupServers.erase(backupServers.begin() + i);
 				this->addBackupTileServer(backupServers);
 				return;
@@ -271,19 +271,19 @@ SimpleMapView::TileServerSource SimpleMapView::tileServerSource() const
 	return m_tileServerSource;
 }
 
-const std::vector<QString>& SimpleMapView::backupTileServers() const
+const QVector<QString>& SimpleMapView::backupTileServers() const
 {
 	return m_backupTileServers;
 }
 
 void SimpleMapView::addBackupTileServer(const QString& tileServer)
 {
-	(void)m_backupTileServers.insert(m_backupTileServers.end(), tileServer);
+	m_backupTileServers += tileServer;
 }
 
-void SimpleMapView::addBackupTileServer(const std::vector<QString>& tileServers)
+void SimpleMapView::addBackupTileServer(const QVector<QString>& tileServers)
 {
-	(void)m_backupTileServers.insert(m_backupTileServers.end(), tileServers.begin(), tileServers.end());
+	m_backupTileServers += tileServers;
 }
 
 void SimpleMapView::clearBackupTileServers()
@@ -296,14 +296,19 @@ bool SimpleMapView::isZoomLocked() const
 	return m_lockZoom;
 }
 
+void SimpleMapView::setLockZoom(bool lock)
+{
+	m_lockZoom = lock;
+}
+
 void SimpleMapView::lockZoom()
 {
-	m_lockZoom = true;
+	this->setLockZoom(true);
 }
 
 void SimpleMapView::unlockZoom()
 {
-	m_lockZoom = false;
+	this->setLockZoom(false);
 }
 
 bool SimpleMapView::isGeolocationLocked() const
@@ -311,44 +316,59 @@ bool SimpleMapView::isGeolocationLocked() const
 	return m_lockGeolocation;
 }
 
+void SimpleMapView::setLockGeolocation(bool lock)
+{
+	m_lockGeolocation = lock;
+}
+
 void SimpleMapView::lockGeolocation()
 {
-	m_lockGeolocation = true;
+	this->setLockGeolocation(true);
 }
 
 void SimpleMapView::unlockGeolocation()
 {
-	m_lockGeolocation = false;
+	this->setLockGeolocation(false);
 }
 
-bool SimpleMapView::isMouseWheelZoomEnabled() const
+bool SimpleMapView::isMouseWheelZoomDisabled() const
 {
 	return m_disableMouseWheelZoom;
 }
 
+void SimpleMapView::setDisableMouseWheelZoom(bool disable)
+{
+	m_disableMouseWheelZoom = disable;
+}
+
 void SimpleMapView::enableMouseWheelZoom()
 {
-	m_disableMouseWheelZoom = false;
+	this->setDisableMouseWheelZoom(false);
 }
 
 void SimpleMapView::disableMouseWheelZoom()
 {
-	m_disableMouseWheelZoom = true;
+	this->setDisableMouseWheelZoom(true);
 }
 
-bool SimpleMapView::isMouseMoveMapEnabled() const
+bool SimpleMapView::isMouseMoveMapDisabled() const
 {
 	return m_disableMouseMoveMap;
 }
 
+void SimpleMapView::setDisableMouseMoveMap(bool disable)
+{
+	m_disableMouseMoveMap = disable;
+}
+
 void SimpleMapView::enableMouseMoveMap()
 {
-	m_disableMouseMoveMap = false;
+	this->setDisableMouseMoveMap(false);
 }
 
 void SimpleMapView::disableMouseMoveMap()
 {
-	m_disableMouseMoveMap = true;
+	this->setDisableMouseMoveMap(true);
 }
 
 const QImage& SimpleMapView::markerIcon() const
@@ -359,6 +379,11 @@ const QImage& SimpleMapView::markerIcon() const
 void SimpleMapView::setMarkerIcon(const QImage& icon)
 {
 	m_markerIcon = icon;
+}
+
+void SimpleMapView::setMarkerIcon(const QString& iconPath)
+{
+	this->setMarkerIcon(QImage(iconPath));
 }
 
 MapImage* SimpleMapView::addMarker(const QGeoCoordinate& position)

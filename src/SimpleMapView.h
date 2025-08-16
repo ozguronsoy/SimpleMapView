@@ -17,11 +17,28 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QString>
+#include <QVector>
 #include <QTimer>
 
+/**
+ * @brief A widget for displaying tile based maps.
+ */
 class SimpleMapView : public QWidget
 {
-	Q_OBJECT
+	Q_OBJECT;
+	Q_PROPERTY(int zoomLevel READ zoomLevel WRITE setZoomLevel NOTIFY zoomLevelChanged);
+	Q_PROPERTY(int minZoomLevel READ minZoomLevel WRITE setMinZoomLevel NOTIFY zoomLevelChanged);
+	Q_PROPERTY(int maxZoomLevel READ maxZoomLevel WRITE setMaxZoomLevel NOTIFY zoomLevelChanged);
+	Q_PROPERTY(QGeoCoordinate center READ center WRITE setCenter NOTIFY centerChanged);
+	Q_PROPERTY(qreal latitude READ latitude WRITE setLatitude NOTIFY centerChanged);
+	Q_PROPERTY(qreal longitude READ longitude WRITE setLongitude NOTIFY centerChanged);
+	Q_PROPERTY(QString tileServer READ tileServer WRITE setTileServer NOTIFY tileServerChanged);
+	Q_PROPERTY(QVector<QString> backupTileServers READ backupTileServers WRITE addBackupTileServer NOTIFY tileServerChanged);
+	Q_PROPERTY(bool lockZoom READ isZoomLocked WRITE setLockZoom);
+	Q_PROPERTY(bool lockGeolocation READ isGeolocationLocked WRITE setLockGeolocation);
+	Q_PROPERTY(bool disableMouseWheelZoom READ isMouseWheelZoomDisabled WRITE setDisableMouseWheelZoom);
+	Q_PROPERTY(bool disableMouseMoveMap READ isMouseMoveMapDisabled WRITE setDisableMouseMoveMap);
+	Q_PROPERTY(QString markerIcon WRITE setMarkerIcon);
 
 public:
 	/** Represents the source location from which map tiles are loaded. */
@@ -81,21 +98,23 @@ public slots:
 	/** Sets the tile server. */
 	void setTileServer(const QString& tileServer, bool wait = true);
 	/** Sets the first available tile server and adds the remaining as backup. */
-	void setTileServer(const std::vector<QString>& tileServers);
+	void setTileServer(const QVector<QString>& tileServers);
 	/** Gets the tile server source. */
 	TileServerSource tileServerSource() const;
 
 	/** Gets the backup server list. */
-	const std::vector<QString>& backupTileServers() const;
+	const QVector<QString>& backupTileServers() const;
 	/** Adds a tile server to the backup server list. */
 	void addBackupTileServer(const QString& tileServer);
 	/** Adds the tile servers to the backup server list. */
-	void addBackupTileServer(const std::vector<QString>& tileServers);
+	void addBackupTileServer(const QVector<QString>& tileServers);
 	/** Clears the backup tile server list. */
 	void clearBackupTileServers();
 
 	/** Checks whether the zoom is locked to the current level. */
 	bool isZoomLocked() const;
+	/** Sets the zoom lock option. */
+	void setLockZoom(bool lock);
 	/** Locks the zoom to the current level so it cannot be changed. */
 	void lockZoom();
 	/** Unlocks the zoom level so it can be changed. */
@@ -103,20 +122,26 @@ public slots:
 
 	/** Checks whether the geolocation is locked. */
 	bool isGeolocationLocked() const;
+	/** Sets the geolocation lock option. */
+	void setLockGeolocation(bool lock);
 	/** Locks the geolocation so it cannot be changed. */
 	void lockGeolocation();
 	/** Unlocks the geolocation so it can be changed. */
 	void unlockGeolocation();
 
-	/** Checks whether changing the zoom level via mouse wheel is enabled. */
-	bool isMouseWheelZoomEnabled() const;
+	/** Checks whether changing the zoom level via mouse wheel is disabled. */
+	bool isMouseWheelZoomDisabled() const;
+	/** Enables/disables changing the zoom level via mouse wheel. */
+	void setDisableMouseWheelZoom(bool disable);
 	/** Enables changing the zoom level via mouse wheel. */
 	void enableMouseWheelZoom();
 	/** Disables changing the zoom level via mouse wheel. */
 	void disableMouseWheelZoom();
 
-	/** Checks whether moving the map via mouse is enabled. */
-	bool isMouseMoveMapEnabled() const;
+	/** Checks whether moving the map via mouse is disabled. */
+	bool isMouseMoveMapDisabled() const;
+	/** Enables/disables moving the map via mouse. */
+	void setDisableMouseMoveMap(bool disable);
 	/** Enables moving the map via mouse. */
 	void enableMouseMoveMap();
 	/** Disables moving the map via mouse. */
@@ -126,6 +151,8 @@ public slots:
 	const QImage& markerIcon() const;
 	/** Sets the icon used for markers. */
 	void setMarkerIcon(const QImage& icon);
+	/** Sets the icon used for markers. */
+	void setMarkerIcon(const QString& iconPath);
 
 	/** Adds a new marker to the map at the provided geolocation. */
 	MapImage* addMarker(qreal latitude, qreal longitude);
@@ -134,7 +161,7 @@ public slots:
 
 	/**
 	 * Downloads tiles and saves them for offline use.
-	 * 
+	 *
 	 * @param path Path to save the tiles.
 	 * @param p1 First geocoordinate of the rectangular region.
 	 * @param p2 Second geocoordinate of the rectangular region.
@@ -226,7 +253,7 @@ private:
 	int m_tileSize;
 	bool m_abortingReplies;
 
-	std::vector<QString> m_backupTileServers;
+	QVector<QString> m_backupTileServers;
 	QTimer m_tileServerTimer; // tries to connect to the current server, or one of the backup servers, periodically.
 	size_t m_backupTileServerIndex;
 
@@ -236,7 +263,7 @@ private:
 	bool m_disableMouseMoveMap;
 
 	QPoint m_lastMousePosition;
-	
+
 	QImage m_markerIcon;
 
 	std::unordered_map<QString, QNetworkReply*> m_replyMap;

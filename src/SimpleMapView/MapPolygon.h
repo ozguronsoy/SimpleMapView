@@ -3,23 +3,30 @@
 
 #include "SimpleMapView/MapLines.h"
 
+/**
+ * @brief Class for drawing polygons on map.
+ */
+
 class MapPolygon : public MapLines
 {
-	Q_OBJECT
+	Q_OBJECT;
+	Q_PROPERTY(QColor backgroundColor READ backgroundColor WRITE setBackgroundColor NOTIFY backgroundColorChanged);
 
 public:
 	explicit MapPolygon(QObject* parent = nullptr);
 
+	/** Gets the background color. */
 	const QColor& backgroundColor() const;
+	/** Sets the background color. */
 	Q_SLOT void setBackgroundColor(const QColor& c);
 
+	/** A signal that's triggered when the background color is changed. */
 	Q_SIGNAL void backgroundColorChanged();
 
 	virtual void paint(QPainter& painter) const override;
 
 private:
 	QColor m_backgroundColor;
-
 };
 
 #endif

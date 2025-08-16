@@ -29,7 +29,7 @@ void MapPolygon::paint(QPainter& painter) const
 	{
 		painter.setPen(this->pen());
 		painter.setBrush(m_backgroundColor);
-		const std::vector<QPointF> screenPoints = this->getScreenPoints();
+		const QVector<QPointF> screenPoints = this->getScreenPoints();
 		painter.drawPolygon(&screenPoints[0], screenPoints.size());
 		painter.setBrush(Qt::transparent);
 	}

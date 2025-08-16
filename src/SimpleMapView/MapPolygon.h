@@ -1,7 +1,7 @@
 #ifndef MAP_POLYGON_H
 #define MAP_POLYGON_H
 
-#include "MapLines.h"
+#include "SimpleMapView/MapLines.h"
 
 class MapPolygon : public MapLines
 {

@@ -1,4 +1,4 @@
-#include "MapLines.h"
+#include "SimpleMapView/MapLines.h"
 #include "SimpleMapView.h"
 
 MapLines::MapLines(QObject* parent)

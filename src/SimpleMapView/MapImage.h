@@ -1,7 +1,7 @@
 #ifndef MAP_IMAGE_H
 #define MAP_IMAGE_H
 
-#include "MapRect.h"
+#include "SimpleMapView/MapRect.h"
 #include <QImage>
 
 class MapImage : public MapRect

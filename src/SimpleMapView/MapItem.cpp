@@ -1,4 +1,4 @@
-#include "MapItem.h"
+#include "SimpleMapView/MapItem.h"
 #include "SimpleMapView.h"
 
 MapPoint::MapPoint()

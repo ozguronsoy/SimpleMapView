@@ -1,7 +1,7 @@
 #ifndef MAP_LINES_H
 #define MAP_LINES_H
 
-#include "MapItem.h"
+#include "SimpleMapView/MapItem.h"
 #include <vector>
 
 class MapLines : public MapItem

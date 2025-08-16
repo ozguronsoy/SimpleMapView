@@ -1,4 +1,4 @@
-#include "MapEllipse.h"
+#include "SimpleMapView/MapEllipse.h"
 #include "SimpleMapView.h"
 #include <QPainterPath>
 

@@ -1,7 +1,7 @@
 #ifndef MAP_ELLIPSE_H
 #define MAP_ELLIPSE_H
 
-#include "MapItem.h"
+#include "SimpleMapView/MapItem.h"
 #include <QSize>
 #include <QColor>
 

@@ -1,7 +1,7 @@
 #ifndef MAP_TEXT_H
 #define MAP_TEXT_H
 
-#include "MapRect.h"
+#include "SimpleMapView/MapRect.h"
 #include <QFont>
 
 class MapText : public MapRect

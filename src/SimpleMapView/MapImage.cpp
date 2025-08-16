@@ -1,4 +1,4 @@
-#include "MapImage.h"
+#include "SimpleMapView/MapImage.h"
 #include "SimpleMapView.h"
 #include <QPainterPath>
 

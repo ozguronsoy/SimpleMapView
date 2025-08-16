@@ -1,7 +1,7 @@
 #ifndef MAP_RECT_H
 #define MAP_RECT_H
 
-#include "MapEllipse.h"
+#include "SimpleMapView/MapEllipse.h"
 #include <array>
 
 class MapRect : public MapEllipse

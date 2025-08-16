@@ -1,4 +1,4 @@
-#include "MapText.h"
+#include "SimpleMapView/MapText.h"
 #include "SimpleMapView.h"
 #include <QFontMetrics>
 

@@ -1,13 +1,13 @@
 #ifndef SIMPLE_MAP_VIEW_H
 #define SIMPLE_MAP_VIEW_H
 
-#include "MapItem.h"
-#include "MapEllipse.h"
-#include "MapRect.h"
-#include "MapText.h"
-#include "MapImage.h"
-#include "MapLines.h"
-#include "MapPolygon.h"
+#include "SimpleMapView/MapItem.h"
+#include "SimpleMapView/MapEllipse.h"
+#include "SimpleMapView/MapRect.h"
+#include "SimpleMapView/MapText.h"
+#include "SimpleMapView/MapImage.h"
+#include "SimpleMapView/MapLines.h"
+#include "SimpleMapView/MapPolygon.h"
 #include <unordered_map>
 #include <memory>
 #include <vector>

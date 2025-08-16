@@ -1,4 +1,4 @@
-#include "MapPolygon.h"
+#include "SimpleMapView/MapPolygon.h"
 #include "SimpleMapView.h"
 
 MapPolygon::MapPolygon(QObject* parent)

@@ -4,41 +4,33 @@ if (CMAKE_CXX_STANDARD LESS 17)
 	message(FATAL_ERROR "C++17 or higher is required")
 endif()
 
-find_package(Qt NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
-find_package(Qt${QT_VERSION_MAJOR}
-    COMPONENTS
-    Core
-    Gui
-    Widgets
-    Positioning 
-    Network
-)
+set(SIMPLE_MAP_VIEW_VERSION_MAJOR 1)
+set(SIMPLE_MAP_VIEW_VERSION_MINOR 0)
+set(SIMPLE_MAP_VIEW_VERSION_PATCH 0)
+set(SIMPLE_MAP_VIEW_VERSION "${SIMPLE_MAP_VIEW_VERSION_MAJOR}.${SIMPLE_MAP_VIEW_VERSION_MINOR}.${SIMPLE_MAP_VIEW_VERSION_PATCH}")
+project(SimpleMapView VERSION ${SIMPLE_MAP_VIEW_VERSION} LANGUAGES CXX)
+
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Positioning Network)
 
 file(GLOB SIMPLE_MAP_VIEW_SOURCES
+	include/*.h
+    src/*.cpp
 
-	${CMAKE_CURRENT_LIST_DIR}/src/*.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp
-	${CMAKE_CURRENT_LIST_DIR}/src/SimpleMapView/*.h
-    ${CMAKE_CURRENT_LIST_DIR}/src/SimpleMapView/*.cpp
+	include/SimpleMapView/*.h
+    src/SimpleMapView/*.cpp
 )
 
-if(DEFINED SIMPLE_MAP_VIEW_ENABLE_RESOURCES)
-	
-	set(CMAKE_AUTORCC ON CACHE BOOL "SimpleMapView Compile Qrc")
-	file(GLOB SIMPLE_MAP_VIEW_SOURCES 
-		${SIMPLE_MAP_VIEW_SOURCES} 
-		${CMAKE_CURRENT_LIST_DIR}/Resources.qrc
-	)
-
-endif()
-
-set(SIMPLE_MAP_VIEW_SOURCES ${SIMPLE_MAP_VIEW_SOURCES} CACHE STRING "source files of SimpleMapView")
-
-set(SIMPLE_MAP_VIEW_LIBRARIES 
-	Qt::Core
-	Qt::Gui
-	Qt::Widgets
-	Qt::Positioning
-	Qt::Network
-	CACHE STRING "SimpleMapView required libraries"
+add_library(SimpleMapView STATIC ${SIMPLE_MAP_VIEW_SOURCES})
+target_include_directories(
+    SimpleMapView
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+)
+target_link_libraries(SimpleMapView
+    PUBLIC
+        Qt::Core
+        Qt::Gui
+        Qt::Widgets
+        Qt::Positioning
+        Qt::Network
 )

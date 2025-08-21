@@ -28,21 +28,20 @@ A Qt widget for rendering tile maps.
 
 CMake:
 ```cmake
-set(SIMPLE_MAP_VIEW_ENABLE_RESOURCES ON) # optional
+find_package(Qt6 REQUIRED COMPONENTS Core)
+qt_standard_project_setup()
+
 add_subdirectory(dependencies/SimpleMapView)
-#include(../dependencies/SimpleMapView/CMakeLists.txt) # if not in a subdirectory
-include_directories(dependencies/SimpleMapView/src)
 
+set(CMAKE_AUTORCC ON)
 set(PROJECT_SOURCES
-    
     # your files
-
-    ${SIMPLE_MAP_VIEW_SOURCES}
+    dependencies/SimpleMapView/Resources.qrc # optional
 )
 
-target_link_libraries(mytarget PRIVATE 
+target_link_libraries(mytarget PUBLIC
     # your libraries
-    ${SIMPLE_MAP_VIEW_LIBRARIES}
+    SimpleMapView
 )
 ```
 

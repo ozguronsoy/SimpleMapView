@@ -35,7 +35,7 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_lockGeolocation(false),
 	m_disableMouseWheelZoom(false),
 	m_disableMouseMoveMap(false),
-	m_markerIcon(":SimpleMapView/marker.svg")
+	m_markerIcon(":/SimpleMapView/marker.svg")
 {
 	m_tileServerTimer.setInterval(SimpleMapView::TILE_SERVER_TIMER_INTERVAL_MS);
 	(void)m_tileServerTimer.connect(&m_tileServerTimer, &QTimer::timeout, this, &SimpleMapView::checkTileServers);

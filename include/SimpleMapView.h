@@ -177,9 +177,9 @@ public slots:
 	void setMarkerIcon(const QString& iconPath);
 
 	/** Adds a new marker to the map at the provided geolocation. */
-	MapImage* addMarker(qreal latitude, qreal longitude);
+	Q_INVOKABLE MapImage* addMarker(qreal latitude, qreal longitude);
 	/** Adds a new marker to the map at the provided geolocation. */
-	MapImage* addMarker(const QGeoCoordinate& position = QGeoCoordinate());
+	Q_INVOKABLE MapImage* addMarker(const QGeoCoordinate& position = QGeoCoordinate());
 
 	/**
 	 * Downloads tiles and saves them for offline use.
@@ -247,7 +247,7 @@ protected:
 	void abortReplies();
 
 	/** Gets all visible tiles. */
-	std::vector<QString> visibleTiles() const;
+	QVector<QString> visibleTiles() const;
 
 	virtual void wheelEvent(QWheelEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;

@@ -23,7 +23,7 @@ public:
 	/** A signal that's triggered when the background color is changed. */
 	Q_SIGNAL void backgroundColorChanged();
 
-	virtual void paint(QPainter& painter) const override;
+	virtual void render(MapRenderer& renderer) const override;
 
 private:
 	QColor m_backgroundColor;

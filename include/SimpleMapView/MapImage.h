@@ -28,7 +28,7 @@ public:
 	/** Sets the aspect ratio mode. */
 	Q_SLOT void setAspectRatioMode(Qt::AspectRatioMode m);
 
-	virtual void paint(QPainter& painter) const override;
+	virtual void render(MapRenderer& renderer) const override;
 
 	/** A signal that's triggered when the image is changed. */
 	Q_SIGNAL void imageChanged();

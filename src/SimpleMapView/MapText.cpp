@@ -2,6 +2,13 @@
 #include "SimpleMapView.h"
 #include <QFontMetrics>
 
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+
+#include <QSGTexture>
+#include <QSGTextureMaterial>
+
+#endif
+
 MapText::MapText(QObject* parent)
 	: MapRect(parent),
 	m_text(),
@@ -95,18 +102,61 @@ void MapText::setTextPadding(qreal left, qreal top, qreal right, qreal bottom)
 	emit this->textPaddingChanged();
 }
 
-void MapText::paint(QPainter& painter) const
+void MapText::render(MapRenderer& renderer) const
 {
-	MapRect::paint(painter);
+	MapRect::render(renderer);
+
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+
+	SimpleMapView* map = this->getMapView();
+	if (map != nullptr)
+	{
+		const QRectF rect = this->calcPaintRect() - m_textPadding;
+
+		QImage textImage(rect.size().toSize(), QImage::Format_RGBA8888);
+		textImage.fill(Qt::transparent);
+
+		QPainter painter(&textImage);
+		painter.setFont(m_font);
+		painter.setPen(m_textColor);
+		painter.drawText(QRectF(QPointF(0, 0), rect.size()), m_textFlags, m_text);
+		painter.end();
+
+		QSGTexture* texture = map->window()->createTextureFromImage(textImage);
+		QSGGeometry* geometry = new QSGGeometry(QSGGeometry::defaultAttributes_TexturedPoint2D(), 4);
+		geometry->setDrawingMode(QSGGeometry::DrawTriangleStrip);
+
+		QSGGeometry::TexturedPoint2D* v = geometry->vertexDataAsTexturedPoint2D();
+		v[0].set(rect.left(), rect.top(), 0, 0);
+		v[1].set(rect.right(), rect.top(), 1, 0);
+		v[2].set(rect.left(), rect.bottom(), 0, 1);
+		v[3].set(rect.right(), rect.bottom(), 1, 1);
+
+		QSGTextureMaterial* material = new QSGTextureMaterial();
+		material->setTexture(texture);
+		material->setFlag(QSGMaterial::Blending);
+
+		QSGGeometryNode* node = new QSGGeometryNode();
+		node->setGeometry(geometry);
+		node->setFlag(QSGNode::OwnsGeometry);
+		node->setMaterial(material);
+		node->setFlag(QSGNode::OwnsMaterial);
+
+		renderer.appendChildNode(node);
+	}
+
+#else
 
 	SimpleMapView* map = this->getMapView();
 	if (map != nullptr)
 	{
 		const QRectF r = this->calcPaintRect();
-		painter.setPen(m_textColor);
-		painter.setFont(m_font);
-		painter.drawText(r - m_textPadding, m_textFlags, m_text);
+		renderer.setPen(m_textColor);
+		renderer.setFont(m_font);
+		renderer.drawText(r - m_textPadding, m_textFlags, m_text);
 	}
+
+#endif
 }
 
 QRectF MapText::calcPaintRect() const
@@ -119,7 +169,7 @@ QRectF MapText::calcPaintRect() const
 			const QFontMetricsF fontMetrics(m_font);
 			const QSizeF s = fontMetrics.boundingRect(QRectF(), m_textFlags, m_text).size();
 			QPointF p = this->position().screenPoint(map);
-			
+
 			this->applyAlignment(p, s);
 
 			return QRectF(p, s) + m_textPadding;

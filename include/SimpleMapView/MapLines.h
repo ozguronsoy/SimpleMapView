@@ -22,7 +22,7 @@ public:
 	/** Sets the points. */
 	void setPoints(const QVector<MapPoint>& points);
 
-	virtual void paint(QPainter& painter) const override;
+	virtual void render(MapRenderer& renderer) const override;
 
 protected:
 	/** Gets the points as screen points (in px). */

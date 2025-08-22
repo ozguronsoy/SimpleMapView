@@ -11,6 +11,15 @@
 #ifdef SIMPLE_MAP_VIEW_USE_QML
 
 #include <QtQml/qqmlregistration.h>
+#include <QSGNode>
+
+using MapRenderer = QSGNode;
+
+#else
+
+#include <QPainter>
+using MapRenderer = QPainter;
+
 
 #endif
 
@@ -21,6 +30,8 @@ class SimpleMapView;
  */
 class MapPoint
 {
+	Q_GADGET;
+
 public:
 	MapPoint();
 	MapPoint(const QPointF& screenPoint);
@@ -42,6 +53,8 @@ private:
  */
 class MapSize
 {
+	Q_GADGET;
+
 public:
 	MapSize();
 	MapSize(const QSizeF& screenSize);
@@ -116,5 +129,20 @@ public:
 	static constexpr const char* ESRI_WORLD_STREET_MAP = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
 	static constexpr const char* ESRI_WORLD_IMAGERY = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 };
+
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+
+class SimpleMapViewQmlHelpers final : public QObject
+{
+	Q_OBJECT;
+
+public:
+	Q_INVOKABLE static MapPoint createMapPoint(const QPointF& screenPoint);
+	Q_INVOKABLE static MapPoint createMapPoint(const QGeoCoordinate& geoPoint);
+	Q_INVOKABLE static MapSize createMapSize(const QSizeF& screenSize);
+	Q_INVOKABLE static MapSize createMapSize(const QGeoCoordinate& geoSize);
+};
+
+#endif
 
 #endif

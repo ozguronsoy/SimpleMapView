@@ -1,6 +1,16 @@
 #include "SimpleMapView/MapEllipse.h"
 #include "SimpleMapView.h"
+
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+
+#include <QSGFlatColorMaterial>
+#include <QtMath>
+
+#else
+
 #include <QPainterPath>
+
+#endif
 
 MapEllipse::MapEllipse(QObject* parent)
 	: MapItem(parent),
@@ -90,22 +100,107 @@ void MapEllipse::setBackgroundColor(const QColor& c)
 	emit this->backgroundColorChanged();
 }
 
-void MapEllipse::paint(QPainter& painter) const
+void MapEllipse::render(MapRenderer& renderer) const
 {
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+
+	constexpr size_t ellipseSegments = 128;
+
+	SimpleMapView* map = this->getMapView();
+	if (map != nullptr)
+	{
+		const QRectF rect = this->calcPaintRect();
+		const QPointF center = rect.center();
+		const float rx = rect.width() / 2.0f;
+		const float ry = rect.height() / 2.0f;
+
+		// fill
+		QSGGeometryNode* fillNode = new QSGGeometryNode();
+		QSGGeometry* fillGeo = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), ellipseSegments * 3);
+		fillGeo->setDrawingMode(QSGGeometry::DrawTriangleStrip); // DrawTriangleFan is not supported starting Qt6
+
+		fillNode->setGeometry(fillGeo);
+		fillNode->setFlag(QSGNode::OwnsGeometry);
+
+		QSGFlatColorMaterial* fillMat = new QSGFlatColorMaterial();
+		fillMat->setColor(m_backgroundColor);
+		fillNode->setMaterial(fillMat);
+		fillNode->setFlag(QSGNode::OwnsMaterial);
+
+		QSGGeometry::Point2D* fillVertices = fillGeo->vertexDataAsPoint2D();
+		for (size_t i = 0; i < ellipseSegments; ++i)
+		{
+			const float theta0 = (-2.0f * M_PI * i) / ellipseSegments;
+			const float theta1 = (-2.0f * M_PI * (i + 1)) / ellipseSegments;
+
+			fillVertices[i * 3 + 0].set(center.x(), center.y());                  
+			
+			fillVertices[i * 3 + 1].set(
+				center.x() + rx * cos(theta0),
+				center.y() + ry * sin(theta0)
+			);
+			
+			fillVertices[i * 3 + 2].set(
+				center.x() + rx * cos(theta1),
+				center.y() + ry * sin(theta1)
+			);
+		}
+
+		renderer.appendChildNode(fillNode);
+
+		// border
+		QSGGeometryNode* borderNode = new QSGGeometryNode();
+		QSGGeometry* borderGeo = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), (ellipseSegments + 1) * 2);
+		borderGeo->setDrawingMode(QSGGeometry::DrawTriangleStrip);
+		borderNode->setGeometry(borderGeo);
+		borderNode->setFlag(QSGNode::OwnsGeometry);
+
+		QSGFlatColorMaterial* borderMat = new QSGFlatColorMaterial();
+		borderMat->setColor(this->penColor());
+		borderNode->setMaterial(borderMat);
+		borderNode->setFlag(QSGNode::OwnsMaterial);
+
+		const float halfPenWidth = this->penWidth() / 2.0f;
+		QSGGeometry::Point2D* borderVertices = borderGeo->vertexDataAsPoint2D();
+
+		for (size_t i = 0; i <= ellipseSegments; ++i)
+		{
+			const float theta = (2 * M_PI * i) / ellipseSegments;
+			const float cosT = cos(theta);
+			const float sinT = sin(theta);
+
+			borderVertices[i * 2].set(
+				center.x() + (rx + halfPenWidth) * cosT,
+				center.y() + (ry + halfPenWidth) * sinT
+			);
+
+			borderVertices[i * 2 + 1].set(
+				center.x() + (rx - halfPenWidth) * cosT,
+				center.y() + (ry - halfPenWidth) * sinT
+			);
+		}
+
+		renderer.appendChildNode(borderNode);
+	}
+
+#else
+
 	SimpleMapView* map = this->getMapView();
 	if (map != nullptr)
 	{
 		QPainterPath painterPath;
 		painterPath.addEllipse(this->calcPaintRect());
 
-		painter.fillPath(painterPath, m_backgroundColor);
+		renderer.fillPath(painterPath, m_backgroundColor);
 
 		if (this->pen().widthF() > 0)
 		{
-			painter.setPen(this->pen());
-			painter.drawPath(painterPath);
+			renderer.setPen(this->pen());
+			renderer.drawPath(painterPath);
 		}
 	}
+
+#endif
 }
 
 QRectF MapEllipse::calcPaintRect() const

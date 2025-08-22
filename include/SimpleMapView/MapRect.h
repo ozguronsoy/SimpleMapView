@@ -23,7 +23,7 @@ public:
 	/** Sets the border radii. */
 	Q_SLOT void setBorderRadius(qreal topLeft, qreal topRight, qreal bottomRight, qreal bottomLeft);
 
-	virtual void paint(QPainter& painter) const override;
+	virtual void render(MapRenderer& renderer) const override;
 
 	/** A signal that's triggered when the border radius is changed. */
 	Q_SIGNAL void borderRadiusChanged();

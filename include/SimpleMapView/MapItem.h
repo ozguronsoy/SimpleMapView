@@ -40,8 +40,8 @@ public:
 	/** Sets the pen style. */
 	void setPenStyle(Qt::PenStyle style);
 
-	/** Draws the item. */
-	virtual void paint(QPainter& painter) const = 0;
+	/** Renders this item onto the map. */
+	virtual void render(MapRenderer& renderer) const = 0;
 
 	/** A signal that's triggered when the map item is changed. */
 	Q_SIGNAL void changed();

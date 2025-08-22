@@ -49,7 +49,7 @@ public:
 	/** Sets the text padding. */
 	Q_SLOT void setTextPadding(qreal left, qreal top, qreal right, qreal bottom);
 
-	virtual void paint(QPainter& painter) const override;
+	virtual void render(MapRenderer& renderer) const override;
 
 	/** A signal that's triggered when the text is changed. */
 	Q_SIGNAL void textChanged();

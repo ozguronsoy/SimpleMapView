@@ -59,6 +59,7 @@ SimpleMapView::SimpleMapView(SimpleMapViewBase* parent)
 
 #ifdef SIMPLE_MAP_VIEW_USE_QML
 
+	this->setAntialiasing(true);
 	this->setFlag(ItemHasContents); // use custom rendering
 	this->setAcceptedMouseButtons(Qt::AllButtons);
 
@@ -70,11 +71,23 @@ SimpleMapView::SimpleMapView(SimpleMapViewBase* parent)
 
 void SimpleMapView::registerQmlTypes()
 {
-	constexpr const char* qmlUri = "com.github.ozguronsoy.SimpleMapView";
 	static TileServers tileServersInstance;
+	static SimpleMapViewQmlHelpers qmlHelpersInstance;
 
-	(void)qmlRegisterType<SimpleMapView>(qmlUri, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "SimpleMapView");
-	(void)qmlRegisterSingletonInstance<TileServers>(qmlUri, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "TileServers", &tileServersInstance);
+	(void)qmlRegisterType<SimpleMapView>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "SimpleMapView");
+	
+	(void)qmlRegisterUncreatableType<MapPoint>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapPoint", "Value type only");
+	(void)qmlRegisterUncreatableType<MapSize>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapSize", "Value type only");
+
+	(void)qmlRegisterType<MapEllipse>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapEllipse");
+	(void)qmlRegisterType<MapRect>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapRect");
+	(void)qmlRegisterType<MapImage>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapImage");
+	(void)qmlRegisterType<MapLines>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapLines");
+	(void)qmlRegisterType<MapPolygon>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapPolygon");
+	(void)qmlRegisterType<MapText>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapText");
+
+	(void)qmlRegisterSingletonInstance<TileServers>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "TileServers", &tileServersInstance);
+	(void)qmlRegisterSingletonInstance<SimpleMapViewQmlHelpers>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "SimpleMapViewQmlHelpers", &qmlHelpersInstance);
 }
 
 #endif
@@ -931,9 +944,9 @@ void SimpleMapView::abortReplies()
 	m_replyMap.clear();
 }
 
-std::vector<QString> SimpleMapView::visibleTiles() const
+QVector<QString> SimpleMapView::visibleTiles() const
 {
-	std::vector<QString> tileKeys;
+	QVector<QString> tileKeys;
 	tileKeys.reserve(m_tileMap.size());
 
 	const QRectF renderRect(0, 0, this->width(), this->height());
@@ -1029,7 +1042,7 @@ void SimpleMapView::paintEvent(QPaintEvent* event)
 			{
 				if (child->inherits("MapItem"))
 				{
-					((MapItem*)child)->paint(painter);
+					((MapItem*)child)->render(painter);
 				}
 				drawItems(child);
 			}
@@ -1055,19 +1068,13 @@ QSGNode* SimpleMapView::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*)
 	if (rootNode == nullptr) rootNode = new QSGNode();
 	rootNode->removeAllChildNodes();
 
-	// fill background
-	QSGSimpleRectNode* bgNode = new QSGSimpleRectNode();
-	bgNode->setRect(this->boundingRect());
-	bgNode->setColor(Qt::darkBlue);
-	rootNode->appendChildNode(bgNode);
-
 	// draw tiles
 	for (const auto& tileKey : this->visibleTiles())
 	{
-		QSGGeometry* geom = new QSGGeometry(QSGGeometry::defaultAttributes_TexturedPoint2D(), 4);
-		geom->setDrawingMode(GL_TRIANGLE_STRIP);
+		QSGGeometry* geometry = new QSGGeometry(QSGGeometry::defaultAttributes_TexturedPoint2D(), 4);
+		geometry->setDrawingMode(QSGGeometry::DrawTriangleStrip);
 
-		QSGGeometry::TexturedPoint2D* v = geom->vertexDataAsTexturedPoint2D();
+		QSGGeometry::TexturedPoint2D* v = geometry->vertexDataAsTexturedPoint2D();
 		const QImage& tile = *m_tileMap[tileKey];
 		const QPointF screenPosition = this->tilePositionToScreenPosition(this->getTilePosition(tileKey));
 		const QRectF tileRect(screenPosition.x(), screenPosition.y(), tile.width(), tile.height());
@@ -1080,13 +1087,26 @@ QSGNode* SimpleMapView::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*)
 		QSGGeometryNode* node = new QSGGeometryNode();
 		QSGTextureMaterial* mat = new QSGTextureMaterial();
 		mat->setTexture(this->window()->createTextureFromImage(tile));
-		node->setGeometry(geom);
+		node->setGeometry(geometry);
 		node->setMaterial(mat);
 		node->setFlag(QSGNode::OwnsGeometry);
 		node->setFlag(QSGNode::OwnsMaterial);
 
 		rootNode->appendChildNode(node);
 	}
+
+	std::function<void(QObject*)> drawItems = [&rootNode, &drawItems](QObject* parent)
+		{
+			for (QObject* child : parent->children())
+			{
+				if (child->inherits("MapItem"))
+				{
+					((MapItem*)child)->render(*rootNode);
+				}
+				drawItems(child);
+			}
+		};
+	drawItems(this);
 
 	return rootNode;
 }

@@ -47,7 +47,7 @@ public:
 	/** Sets the background color. */
 	Q_SLOT void setBackgroundColor(const QColor& c);
 
-	virtual void paint(QPainter& painter) const override;
+	virtual void render(MapRenderer& renderer) const override;
 
 	/** A signal that's triggered when the position is changed. */
 	Q_SIGNAL void positionChanged();

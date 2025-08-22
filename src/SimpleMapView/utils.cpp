@@ -151,3 +151,12 @@ QString TileServers::ThunderforestLandscape() const { return TileServers::THUNDE
 QString TileServers::ThunderforestOutdoors() const { return TileServers::THUNDERFOREST_OUTDOORS; }
 QString TileServers::EsriWorldStreetMap() const { return TileServers::ESRI_WORLD_STREET_MAP; }
 QString TileServers::EsriWorldImagery() const { return TileServers::ESRI_WORLD_IMAGERY; }
+
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+
+MapPoint SimpleMapViewQmlHelpers::createMapPoint(const QPointF& screenPoint) { return MapPoint(screenPoint); }
+MapPoint SimpleMapViewQmlHelpers::createMapPoint(const QGeoCoordinate& geoPoint) { return MapPoint(geoPoint); }
+MapSize SimpleMapViewQmlHelpers::createMapSize(const QSizeF& screenSize) { return MapSize(screenSize); }
+MapSize SimpleMapViewQmlHelpers::createMapSize(const QGeoCoordinate& geoSize) { return MapSize(geoSize); }
+
+#endif

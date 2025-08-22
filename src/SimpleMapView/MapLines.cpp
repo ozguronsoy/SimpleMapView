@@ -10,7 +10,7 @@ MapLines::MapLines(QObject* parent)
 
 QVector<MapPoint>& MapLines::points()
 {
-	this->repaintMap();
+	this->updateMap();
 	return m_points;
 }
 

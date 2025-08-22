@@ -8,24 +8,39 @@
 #include <QWheelEvent>
 #include <QDirIterator>
 #include <QImageReader>
-#include <QProgressBar>
 #include <QDir>
 #include <QFile>
 #include <QTextStream>
 #include <QMetaObject>
 #include <QDebug>
 
+#ifndef SIMPLE_MAP_VIEW_USE_QML
+
+#include <QProgressBar>
+
+#else
+
+#include <qqml.h>
+#include <QSGGeometryNode>
+#include <QSGFlatColorMaterial>
+#include <QSGSimpleRectNode>
+#include <QSGGeometry>
+#include <QSGTexture>
+#include <QSGTextureMaterial>
+
+#endif
+
 #define GET_IN_RANGE(v, minv, maxv) (std::min(std::max((v), (minv)), (maxv)))
 
-SimpleMapView::SimpleMapView(QWidget* parent)
-	: QWidget(parent),
+SimpleMapView::SimpleMapView(SimpleMapViewBase* parent)
+	: SimpleMapViewBase(parent),
 	m_zoomLevel(17),
 	m_minZoomLevel(0),
 	m_maxZoomLevel(21),
 	m_tileCountPerAxis(1 << m_zoomLevel),
 	m_center(39.912341799204775, 32.851170267919244),
-	m_tileServer(SimpleMapView::TileServers::INVALID),
-	m_tileServerSource(SimpleMapView::TileServerSource::Invalid),
+	m_tileServer(TileServers::INVALID),
+	m_tileServerSource(TileServerSource::Invalid),
 	m_networkManager(this),
 	m_tileSize(256),
 	m_abortingReplies(false),
@@ -40,14 +55,29 @@ SimpleMapView::SimpleMapView(QWidget* parent)
 	m_tileServerTimer.setInterval(SimpleMapView::TILE_SERVER_TIMER_INTERVAL_MS);
 	(void)m_tileServerTimer.connect(&m_tileServerTimer, &QTimer::timeout, this, &SimpleMapView::checkTileServers);
 
-	this->setTileServer(SimpleMapView::TileServers::OSM);
+	this->setTileServer(TileServers::OSM);
+
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+
+	this->setFlag(ItemHasContents); // use custom rendering
+	this->setAcceptedMouseButtons(Qt::AllButtons);
+
+#endif
+
 }
 
-void SimpleMapView::resize(int w, int h)
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+
+void SimpleMapView::registerQmlTypes()
 {
-	QWidget::resize(w, h);
-	this->updateMap();
+	constexpr const char* qmlUri = "com.github.ozguronsoy.SimpleMapView";
+	static TileServers tileServersInstance;
+
+	(void)qmlRegisterType<SimpleMapView>(qmlUri, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "SimpleMapView");
+	(void)qmlRegisterSingletonInstance<TileServers>(qmlUri, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "TileServers", &tileServersInstance);
 }
+
+#endif
 
 int SimpleMapView::minZoomLevel() const
 {
@@ -175,7 +205,7 @@ void SimpleMapView::setTileServer(const QString& tileServer, bool wait)
 			auto it = std::remove_if(m_backupTileServers.begin(), m_backupTileServers.end(),
 				[tileServer](const QString& backupServer) { return backupServer == tileServer; });
 			(void)m_backupTileServers.erase(it, m_backupTileServers.end());
-			if (oldTileServer != SimpleMapView::TileServers::INVALID)
+			if (oldTileServer != TileServers::INVALID)
 			{
 				m_backupTileServers.push_back(oldTileServer);
 			}
@@ -195,7 +225,7 @@ void SimpleMapView::setTileServer(const QString& tileServer, bool wait)
 					QImage tileImage;
 					tileImage.loadFromData(reply->readAll());
 					changeTileServer(tileImage.width());
-					m_tileServerSource = SimpleMapView::TileServerSource::Remote;
+					m_tileServerSource = TileServerSource::Remote;
 
 					this->updateMap();
 					emit this->tileServerChanged();
@@ -234,7 +264,7 @@ void SimpleMapView::setTileServer(const QString& tileServer, bool wait)
 			tileSize = reader.size().width();
 		}
 		changeTileServer(tileSize);
-		m_tileServerSource = (tileServer.startsWith(":")) ? (SimpleMapView::TileServerSource::Resource) : (SimpleMapView::TileServerSource::Local);
+		m_tileServerSource = (tileServer.startsWith(":")) ? (TileServerSource::Resource) : (TileServerSource::Local);
 
 
 		QDir path(m_tileServer);
@@ -252,7 +282,7 @@ void SimpleMapView::setTileServer(const QVector<QString>& tileServers)
 	for (size_t i = 0; i < tileServers.size(); ++i)
 	{
 		const QString tileServer = tileServers[i];
-		if (tileServer != SimpleMapView::TileServers::INVALID)
+		if (tileServer != TileServers::INVALID)
 		{
 			this->setTileServer(tileServer);
 			if (m_tileServer == tileServer)
@@ -426,7 +456,7 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 {
 	// This is on purpose, My heart demons told me to write this code.
 
-	if (m_tileServer == SimpleMapView::TileServers::INVALID)
+	if (m_tileServer == TileServers::INVALID)
 	{
 		qDebug() << "[SimpleMapView]" << "Tile server is not set.";
 		return;
@@ -487,12 +517,17 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 
 	std::shared_ptr<size_t> currentRequestCount(new size_t(0));
 	std::shared_ptr<size_t> downloadedTileCount(new size_t(0));
+
+#ifndef SIMPLE_MAP_VIEW_USE_QML
 	std::shared_ptr<QProgressBar> progressBar(new QProgressBar(nullptr));
 	progressBar->setWindowTitle("Downloading Tiles");
 	progressBar->resize(300, 200);
 	progressBar->setRange(0, nTilesToDownload);
 	progressBar->setValue(0);
 	progressBar->show();
+#else
+	const int progressBar = 0; // didn't want to remove progress bar from the lambdas
+#endif
 
 	std::shared_ptr<std::function<void(size_t, size_t, int)>> downloadNextTile = std::make_shared<std::function<void(size_t, size_t, int)>>();
 
@@ -579,7 +614,9 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 						}
 
 						(*downloadedTileCount)++;
+#ifndef SIMPLE_MAP_VIEW_USE_QML
 						progressBar->setValue(*downloadedTileCount);
+#endif
 
 						(*currentRequestCount)--;
 						(*downloadNextTile)(*x_next, *y_next, *z_next);
@@ -607,7 +644,9 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 					[this, downloadNextTile, increaseTilePosition, qrcFile, qrcTextStream, x_next, y_next, z_next, z_end, originalZ, currentRequestCount, dir, progressBar, downloadedTileCount]()
 					{
 						(*downloadedTileCount)++;
+#ifndef SIMPLE_MAP_VIEW_USE_QML
 						progressBar->setValue(*downloadedTileCount);
+#endif
 
 						(*currentRequestCount)--;
 						(*downloadNextTile)(*x_next, *y_next, *z_next);
@@ -762,7 +801,7 @@ QString SimpleMapView::formatTileServerUrlString(QString tileServerUrl, const QP
 
 void SimpleMapView::updateMap()
 {
-	if (m_tileServer == SimpleMapView::TileServers::INVALID || m_tileServerSource == SimpleMapView::TileServerSource::Invalid) return;
+	if (m_tileServer == TileServers::INVALID || m_tileServerSource == TileServerSource::Invalid) return;
 
 	const QPoint requiredTileCount = this->calcRequiredTileCount();
 	const QPointF centerTilePosition = this->geoCoordinateToTilePosition(m_center);
@@ -789,21 +828,21 @@ void SimpleMapView::updateMap()
 			}
 		}
 	}
-	if (noNewTiles || m_tileServerSource != SimpleMapView::TileServerSource::Remote) this->repaint();
+	if (noNewTiles || m_tileServerSource != TileServerSource::Remote) this->update();
 }
 
 void SimpleMapView::fetchTile(const QPoint& tilePosition)
 {
-	if (m_tileServer == SimpleMapView::TileServers::INVALID) return;
+	if (m_tileServer == TileServers::INVALID) return;
 	switch (m_tileServerSource)
 	{
-	case SimpleMapView::TileServerSource::Remote:
+	case TileServerSource::Remote:
 		this->fetchTileFromRemote(tilePosition);
 		break;
-	case SimpleMapView::TileServerSource::Local:
+	case TileServerSource::Local:
 		this->fetchTileFromLocal(tilePosition);
 		break;
-	case SimpleMapView::TileServerSource::Resource:
+	case TileServerSource::Resource:
 		this->fetchTileFromResource(tilePosition);
 		break;
 	default:
@@ -850,7 +889,7 @@ void SimpleMapView::fetchTileFromRemote(const QPoint& tilePosition)
 
 			if (m_replyMap.size() == 0)
 			{
-				this->repaint();
+				this->update();
 			}
 		}
 	);
@@ -913,44 +952,6 @@ std::vector<QString> SimpleMapView::visibleTiles() const
 	return tileKeys;
 }
 
-void SimpleMapView::paintEvent(QPaintEvent* event)
-{
-	QPainter painter(this);
-	painter.setRenderHint(QPainter::Antialiasing);
-	painter.setRenderHint(QPainter::TextAntialiasing);
-	painter.setRenderHint(QPainter::LosslessImageRendering);
-
-	const QPainterPath painterPath = this->calcPaintClipRegion();
-	painter.setClipPath(painterPath);
-
-	// fill background
-	painter.fillRect(event->region().boundingRect(), painter.background());
-
-	// draw tiles
-	for (const auto& tileKey : this->visibleTiles())
-	{
-		const QPointF screenPosition = this->tilePositionToScreenPosition(this->getTilePosition(tileKey));
-		painter.drawImage(screenPosition.x(), screenPosition.y(), *m_tileMap[tileKey]);
-	}
-
-	std::function<void(QObject*)> drawItems = [&painter, &drawItems](QObject* parent)
-		{
-			for (QObject* child : parent->children())
-			{
-				if (child->inherits("MapItem"))
-				{
-					((MapItem*)child)->paint(painter);
-				}
-				drawItems(child);
-			}
-		};
-	drawItems(this);
-
-	// draw border
-	painter.setPen(this->extractBorderPenFromStyleSheet());
-	painter.drawPath(painterPath);
-}
-
 void SimpleMapView::wheelEvent(QWheelEvent* event)
 {
 	if (!this->isEnabled() || m_disableMouseWheelZoom || m_lockZoom) return;
@@ -994,6 +995,104 @@ void SimpleMapView::mouseMoveEvent(QMouseEvent* event)
 	}
 }
 
+#ifndef SIMPLE_MAP_VIEW_USE_QML
+
+void SimpleMapView::resizeEvent(QResizeEvent* event)
+{
+	this->updateMap();
+	QWidget::resizeEvent(event);
+}
+
+void SimpleMapView::paintEvent(QPaintEvent* event)
+{
+	QPainter painter(this);
+	painter.setRenderHint(QPainter::Antialiasing);
+	painter.setRenderHint(QPainter::TextAntialiasing);
+	painter.setRenderHint(QPainter::LosslessImageRendering);
+
+	const QPainterPath painterPath = this->calcPaintClipRegion();
+	painter.setClipPath(painterPath);
+
+	// fill background
+	painter.fillRect(event->region().boundingRect(), painter.background());
+
+	// draw tiles
+	for (const auto& tileKey : this->visibleTiles())
+	{
+		const QPointF screenPosition = this->tilePositionToScreenPosition(this->getTilePosition(tileKey));
+		painter.drawImage(screenPosition.x(), screenPosition.y(), *m_tileMap[tileKey]);
+	}
+
+	std::function<void(QObject*)> drawItems = [&painter, &drawItems](QObject* parent)
+		{
+			for (QObject* child : parent->children())
+			{
+				if (child->inherits("MapItem"))
+				{
+					((MapItem*)child)->paint(painter);
+				}
+				drawItems(child);
+			}
+		};
+	drawItems(this);
+
+	// draw border
+	painter.setPen(this->extractBorderPenFromStyleSheet());
+	painter.drawPath(painterPath);
+}
+
+#else
+
+void SimpleMapView::geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry)
+{
+	this->updateMap();
+	QQuickItem::geometryChange(newGeometry, oldGeometry);
+}
+
+QSGNode* SimpleMapView::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*)
+{
+	QSGNode* rootNode = oldNode;
+	if (rootNode == nullptr) rootNode = new QSGNode();
+	rootNode->removeAllChildNodes();
+
+	// fill background
+	QSGSimpleRectNode* bgNode = new QSGSimpleRectNode();
+	bgNode->setRect(this->boundingRect());
+	bgNode->setColor(Qt::darkBlue);
+	rootNode->appendChildNode(bgNode);
+
+	// draw tiles
+	for (const auto& tileKey : this->visibleTiles())
+	{
+		QSGGeometry* geom = new QSGGeometry(QSGGeometry::defaultAttributes_TexturedPoint2D(), 4);
+		geom->setDrawingMode(GL_TRIANGLE_STRIP);
+
+		QSGGeometry::TexturedPoint2D* v = geom->vertexDataAsTexturedPoint2D();
+		const QImage& tile = *m_tileMap[tileKey];
+		const QPointF screenPosition = this->tilePositionToScreenPosition(this->getTilePosition(tileKey));
+		const QRectF tileRect(screenPosition.x(), screenPosition.y(), tile.width(), tile.height());
+
+		v[0].set(tileRect.left(), tileRect.top(), 0, 0);
+		v[1].set(tileRect.right(), tileRect.top(), 1, 0);
+		v[2].set(tileRect.left(), tileRect.bottom(), 0, 1);
+		v[3].set(tileRect.right(), tileRect.bottom(), 1, 1);
+
+		QSGGeometryNode* node = new QSGGeometryNode();
+		QSGTextureMaterial* mat = new QSGTextureMaterial();
+		mat->setTexture(this->window()->createTextureFromImage(tile));
+		node->setGeometry(geom);
+		node->setMaterial(mat);
+		node->setFlag(QSGNode::OwnsGeometry);
+		node->setFlag(QSGNode::OwnsMaterial);
+
+		rootNode->appendChildNode(node);
+	}
+
+	return rootNode;
+}
+
+#endif
+
 void SimpleMapView::checkTileServers()
 {
 	constexpr bool wait = false;
@@ -1005,7 +1104,7 @@ void SimpleMapView::checkTileServers()
 
 	if (m_backupTileServerIndex == 0)
 	{
-		if (m_tileServer != SimpleMapView::TileServers::INVALID)
+		if (m_tileServer != TileServers::INVALID)
 		{
 			this->setTileServer(m_tileServer, wait);
 		}
@@ -1025,6 +1124,8 @@ void SimpleMapView::checkTileServers()
 
 	m_backupTileServerIndex++;
 }
+
+#ifndef SIMPLE_MAP_VIEW_USE_QML
 
 QPainterPath SimpleMapView::calcPaintClipRegion() const
 {
@@ -1229,3 +1330,5 @@ QPen SimpleMapView::extractBorderPenFromStyleSheet() const
 
 	return pen;
 }
+
+#endif

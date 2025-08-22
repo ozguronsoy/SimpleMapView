@@ -21,7 +21,7 @@ void MapText::setText(const QString& t)
 {
 	m_text = t;
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->textChanged();
@@ -36,7 +36,7 @@ void MapText::setTextFlags(int flags)
 {
 	m_textFlags = flags;
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->textFlagsChanged();
@@ -51,7 +51,7 @@ void MapText::setTextColor(const QColor& c)
 {
 	m_textColor = c;
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->textColorChanged();
@@ -66,7 +66,7 @@ void MapText::setFont(const QFont& f)
 {
 	m_font = f;
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->fontChanged();
@@ -89,7 +89,7 @@ void MapText::setTextPadding(qreal left, qreal top, qreal right, qreal bottom)
 	m_textPadding.setRight(right);
 	m_textPadding.setBottom(bottom);
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->textPaddingChanged();

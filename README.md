@@ -73,8 +73,8 @@ mapView->setZoomLevel(9);
 you can use any tile server that contains ``{x}``, ``{y}``, and ``{z}`` coordinates in the URL.
 
 ```c++
-mapView->setTileServer(SimpleMapView::TileServers::GOOGLE_MAP);
-mapView->setTileServer(SimpleMapView::TileServers::GOOGLE_SAT);
+mapView->setTileServer(TileServers::GOOGLE_MAP);
+mapView->setTileServer(TileServers::GOOGLE_SAT);
 mapView->setTileServer("https://a.tile.maptiler.com/{z}/{x}/{y}.png?key=YOUR_API_KEY");
 ``` 
 ![satellite_map](readme_images/map_satellite.png)

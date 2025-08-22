@@ -20,7 +20,7 @@ void MapEllipse::setAlignmentFlags(Qt::Alignment f)
 {
 	m_alignmentFlags = f;
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->positionChanged();
@@ -44,7 +44,7 @@ void MapEllipse::setPosition(const QGeoCoordinate& position)
 void MapEllipse::setPosition(const MapPoint& position)
 {
 	m_position = position;
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->positionChanged();
@@ -69,7 +69,7 @@ void MapEllipse::setSize(const MapSize& s)
 {
 	m_size = s;
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->sizeChanged();
@@ -84,7 +84,7 @@ void MapEllipse::setBackgroundColor(const QColor& c)
 {
 	m_backgroundColor = c;
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->backgroundColorChanged();

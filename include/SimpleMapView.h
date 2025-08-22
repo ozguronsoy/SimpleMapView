@@ -1,6 +1,7 @@
 #ifndef SIMPLE_MAP_VIEW_H
 #define SIMPLE_MAP_VIEW_H
 
+#include "SimpleMapView/utils.h"
 #include "SimpleMapView/MapItem.h"
 #include "SimpleMapView/MapEllipse.h"
 #include "SimpleMapView/MapRect.h"
@@ -12,7 +13,6 @@
 #include <memory>
 #include <vector>
 #include <array>
-#include <QWidget>
 #include <QGeoCoordinate>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -20,10 +20,22 @@
 #include <QVector>
 #include <QTimer>
 
+#ifndef SIMPLE_MAP_VIEW_USE_QML
+
+#include <QWidget>
+using SimpleMapViewBase = QWidget;
+
+#else
+
+#include <QQuickItem>
+using SimpleMapViewBase = QQuickItem;
+
+#endif
+
 /**
  * @brief A widget for displaying tile based maps.
  */
-class SimpleMapView : public QWidget
+class SimpleMapView : public SimpleMapViewBase
 {
 	Q_OBJECT;
 	Q_PROPERTY(int zoomLevel READ zoomLevel WRITE setZoomLevel NOTIFY zoomLevelChanged);
@@ -40,6 +52,10 @@ class SimpleMapView : public QWidget
 	Q_PROPERTY(bool disableMouseMoveMap READ isMouseMoveMapDisabled WRITE setDisableMouseMoveMap);
 	Q_PROPERTY(QString markerIcon WRITE setMarkerIcon);
 
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+	QML_ELEMENT;
+#endif
+
 public:
 	/** Represents the source location from which map tiles are loaded. */
 	enum class TileServerSource
@@ -55,12 +71,18 @@ public:
 	};
 
 public:
-	explicit SimpleMapView(QWidget* parent = nullptr);
+	explicit SimpleMapView(SimpleMapViewBase* parent = nullptr);
 	~SimpleMapView() = default;
 
-public slots:
-	void resize(int w, int h);
 
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+
+	/** Registers the QML types on run-time. Call this after creating the app instance. */
+	static void registerQmlTypes();
+
+#endif
+
+public slots:
 	/** Gets the minimum zoom level. */
 	int minZoomLevel() const;
 	/** Sets the minimum zoom level. */
@@ -227,17 +249,25 @@ protected:
 	/** Gets all visible tiles. */
 	std::vector<QString> visibleTiles() const;
 
-	/** Renders all tiles and map items to the display. */
-	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void wheelEvent(QWheelEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
+#ifndef SIMPLE_MAP_VIEW_USE_QML
+	virtual void resizeEvent(QResizeEvent* event) override;
+	virtual void paintEvent(QPaintEvent* event) override;
+#else
+	virtual void geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry) override;
+	virtual QSGNode* updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) override;
+#endif
 
 private:
 	void checkTileServers();
+
+#ifndef SIMPLE_MAP_VIEW_USE_QML
 	QPainterPath calcPaintClipRegion() const;
 	std::array<int, 4> extractBorderRadiiFromStyleSheet() const; // top-left, top-right, bottom-right, bottom-left
 	QPen extractBorderPenFromStyleSheet() const;
+#endif
 
 private:
 	int m_zoomLevel;
@@ -271,29 +301,6 @@ private:
 
 	static constexpr unsigned int TILE_SERVER_TIMER_INTERVAL_MS = 100;
 	static constexpr unsigned int DOWNLOAD_MAX_CONCURRENT_REQUEST_COUNT = 10;
-
-public:
-	class TileServers
-	{
-	public:
-		TileServers() = delete;
-		TileServers(const TileServers&) = delete;
-		TileServers& operator=(const TileServers&) = delete;
-
-		static constexpr const char* INVALID = "tile_server_invalid";
-		static constexpr const char* OSM = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-		static constexpr const char* OPENTOPOMAP = "https://tile.opentopomap.org/{z}/{x}/{y}.png";
-		static constexpr const char* GOOGLE_MAP = "https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga";
-		static constexpr const char* GOOGLE_SAT = "https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga";
-		static constexpr const char* GOOGLE_LAND = "https://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}&s=Ga";
-		static constexpr const char* CARTODB_POSITRON = "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png";
-		static constexpr const char* CARTODB_DARK_MATTER = "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png";
-		static constexpr const char* THUNDERFOREST_TRANSPORT = "https://tile.thunderforest.com/transport/{z}/{x}/{y}.png";
-		static constexpr const char* THUNDERFOREST_LANDSCAPE = "https://tile.thunderforest.com/landscape/{z}/{x}/{y}.png";
-		static constexpr const char* THUNDERFOREST_OUTDOORS = "https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png";
-		static constexpr const char* ESRI_WORLD_STREET_MAP = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
-		static constexpr const char* ESRI_WORLD_IMAGERY = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-	};
 };
 
 #endif

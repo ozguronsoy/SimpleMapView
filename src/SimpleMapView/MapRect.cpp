@@ -30,7 +30,7 @@ void MapRect::setBorderRadius(qreal topLeft, qreal topRight, qreal bottomRight, 
 	m_borderRadii[2] = bottomRight;
 	m_borderRadii[3] = bottomLeft;
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->borderRadiusChanged();

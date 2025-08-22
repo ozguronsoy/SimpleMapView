@@ -16,7 +16,7 @@ void MapPolygon::setBackgroundColor(const QColor& c)
 {
 	m_backgroundColor = c;
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->backgroundColorChanged();

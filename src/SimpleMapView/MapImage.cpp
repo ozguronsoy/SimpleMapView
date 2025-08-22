@@ -24,7 +24,7 @@ void MapImage::setImage(const QImage& img)
 {
 	m_image = img;
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->imageChanged();
@@ -39,7 +39,7 @@ void MapImage::setAspectRatioMode(Qt::AspectRatioMode m)
 {
 	m_aspectRatioMode = m;
 
-	this->repaintMap();
+	this->updateMap();
 
 	emit this->changed();
 	emit this->imageChanged();

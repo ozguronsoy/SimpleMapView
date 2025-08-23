@@ -19,6 +19,8 @@ A Qt widget for rendering tile maps.
 - [Markers](#markers)
     - [Add Marker](#add-marker)
     - [Change Default Marker Icon](#change-default-marker-icon)
+- [QML](#qml)
+- [Using Offline Maps](#using-offline-maps)
 
 ## Setup
 
@@ -31,6 +33,7 @@ CMake:
 find_package(Qt6 REQUIRED COMPONENTS Core)
 qt_standard_project_setup()
 
+set(SIMPLE_MAP_VIEW_USE_QML ON) # if QML app
 add_subdirectory(dependencies/SimpleMapView)
 
 set(CMAKE_AUTORCC ON)
@@ -47,7 +50,8 @@ target_link_libraries(mytarget PUBLIC
 
 qmake:
 ```
-SIMPLE_MAP_VIEW_ENABLE_RESOURCES = 1 
+SIMPLE_MAP_VIEW_ENABLE_RESOURCES = 1 # optional
+SIMPLE_MAP_VIEW_USE_QML = 1 # if QML app
 include(dependencies/SimpleMapView/SimpleMapView.pro)
 ```
 
@@ -213,3 +217,112 @@ QImage newIcon(":/map_marker_alt.svg");
 // newIcon.doStuff();
 mapView->setMarkerIcon(newIcon);
 ```
+
+## QML
+
+``SimpleMapView`` also provides a QML component based on ``QQuickItem`` instead of ``QWidget``. Since ``QQuickItem`` uses GPU-accelerated rendering, it offers better performance.
+
+To use the QML component, you need to enable it in your build system first.
+
+CMake:
+```cmake
+set(SIMPLE_MAP_VIEW_USE_QML ON)
+```
+
+qmake:
+```
+SIMPLE_MAP_VIEW_USE_QML = 1
+```
+
+Then in your ``main.cpp`` file, you need to register the QML components after creating the ``app`` instance.
+
+Sample main code:
+```c++
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
+#include "SimpleMapView.h"
+
+int main(int argc, char *argv[])
+{
+    QGuiApplication app(argc, argv);
+
+    SimpleMapView::registerQmlTypes();
+
+    QQmlApplicationEngine engine;
+    engine.load(QUrl(QStringLiteral("qrc:/qt/qml/yourapp/main.qml")));
+    if (engine.rootObjects().isEmpty())
+        return -1;
+
+    return app.exec();
+}
+```
+
+After that you can import and use the QML components in your ``.qml`` files.
+
+```qml
+import QtQuick
+import QtQuick.Window
+import QtPositioning
+import com.github.ozguronsoy.SimpleMapView
+
+Window {
+    visible: true
+    width: 960
+    height: 540
+    title: "QtQuickApplication1"
+
+    SimpleMapView {
+        id: map
+        anchors.fill: parent
+        tileServer: TileServers.GOOGLE_MAP
+        latitude: 37.78310363232004 // Denizli, Türkiye
+        longitude: 29.095721285868844
+        zoomLevel: 14
+
+        MapEllipse {
+            backgroundColor: "red"
+            penColor: "blue"
+            penWidth: 4
+            position: SimpleMapViewQmlHelpers.createMapPoint(Qt.point(50, 50))
+            size: SimpleMapViewQmlHelpers.createMapSize(Qt.size(150, 100))
+        }
+
+        MapRect {
+            backgroundColor: "blue"
+            penColor: "red"
+            penWidth: 4
+            position: SimpleMapViewQmlHelpers.createMapPoint(QtPositioning.coordinate(37.77610363232004, 29.065721285868844))
+            size: SimpleMapViewQmlHelpers.createMapSize(QtPositioning.coordinate(0.006, 0.01))
+        }
+
+        Component.onCompleted: {
+            map.addMarker(map.center)
+        }
+    }
+}
+
+```
+
+## Using Offline Maps
+
+Create a widgets app and download the tiles. This is a one time thing.
+```c++
+SimpleMapView* mapView = new SimpleMapView(this);
+
+// Eskişehir, Türkiye
+const QGeoCoordinate topLeft(39.86073417201014, 30.292027040985936);
+const QGeoCoordinate bottomRight(39.68314525072665, 30.719807145290957);
+const int zoomLevel1 = 10;
+const int zoomLevel2 = 15;
+
+mapView->downloadTiles("path/to/offline-tiles", topLeft, bottomRight, zoomLevel1, zoomLevel2);
+```
+
+Use downloaded tiles
+```c++
+SimpleMapView* mapView = new SimpleMapView(this);
+mapView->setTileServer("path/to/offline-tiles");
+// mapView->setTileServer(":/SimpleMapView/Tiles");
+```
+
+``downloadTiles`` method also generates a ``qrc`` file so one can use the resource system. However, this is not recommended for large maps, as it increases compile time and can significantly bloat the executable.

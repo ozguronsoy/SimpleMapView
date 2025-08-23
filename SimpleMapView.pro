@@ -1,15 +1,34 @@
-QT *= core
-QT *= gui
-QT *= widgets
-QT *= network
-QT *= positioning
+QT *= core network positioning
 
-INCLUDEPATH += $$PWD/src
+SIMPLE_MAP_VIEW_VERSION_MAJOR = 1
+SIMPLE_MAP_VIEW_VERSION_MINOR = 1
+SIMPLE_MAP_VIEW_VERSION_PATCH = 0
+SIMPLE_MAP_VIEW_QML_URI = com.github.ozguronsoy.SimpleMapView
 
-HEADERS += $$files($$PWD/src/*.h) $$files($$PWD/src/SimpleMapView/*.h)
+DEFINES += SIMPLE_MAP_VIEW_VERSION_MAJOR=$$SIMPLE_MAP_VIEW_VERSION_MAJOR
+DEFINES += SIMPLE_MAP_VIEW_VERSION_MINOR=$$SIMPLE_MAP_VIEW_VERSION_MINOR
+DEFINES += SIMPLE_MAP_VIEW_VERSION_PATCH=$$SIMPLE_MAP_VIEW_VERSION_PATCH
+
+isEmpty(SIMPLE_MAP_VIEW_USE_QML) {
+
+    QT *= gui widgets
+
+} else {
+
+    QT *= quick
+    DEFINES += SIMPLE_MAP_VIEW_USE_QML
+    DEFINES += SIMPLE_MAP_VIEW_QML_URI=\\\"$$SIMPLE_MAP_VIEW_QML_URI\\\"
+
+}
+
+INCLUDEPATH += $$PWD/include
+
+HEADERS += $$files($$PWD/include/*.h) $$files($$PWD/include/SimpleMapView/*.h)
 SOURCES += $$files($$PWD/src/*.cpp) $$files($$PWD/src/SimpleMapView/*.cpp)
 
 !isEmpty(SIMPLE_MAP_VIEW_ENABLE_RESOURCES) {
+
     RESOURCES += $$PWD/Resources.qrc
+
 }
 

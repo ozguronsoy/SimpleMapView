@@ -2,6 +2,7 @@
 #define MAP_RECT_H
 
 #include "SimpleMapView/MapEllipse.h"
+#include <QPainterPath>
 #include <array>
 
 /**

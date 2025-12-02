@@ -13,6 +13,7 @@
 #include <QTextStream>
 #include <QMetaObject>
 #include <QDebug>
+#include <QtCore/qresource.h>
 
 #ifndef SIMPLE_MAP_VIEW_USE_QML
 
@@ -52,6 +53,10 @@ SimpleMapView::SimpleMapView(SimpleMapViewBase* parent)
 	m_disableMouseMoveMap(false),
 	m_markerIcon(":/SimpleMapView/marker.svg")
 {
+#ifdef SIMPLE_MAP_VIEW_BUILD_PYTHON_BINDINGS 
+	Q_INIT_RESOURCE(Resources);
+#endif
+
 	m_tileServerTimer.setInterval(SimpleMapView::TILE_SERVER_TIMER_INTERVAL_MS);
 	(void)m_tileServerTimer.connect(&m_tileServerTimer, &QTimer::timeout, this, &SimpleMapView::checkTileServers);
 
@@ -75,7 +80,7 @@ void SimpleMapView::registerQmlTypes()
 	static SimpleMapViewQmlHelpers qmlHelpersInstance;
 
 	(void)qmlRegisterType<SimpleMapView>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "SimpleMapView");
-	
+
 	(void)qmlRegisterUncreatableType<MapPoint>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapPoint", "Value type only");
 	(void)qmlRegisterUncreatableType<MapSize>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapSize", "Value type only");
 

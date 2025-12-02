@@ -5,12 +5,12 @@
 #include <QFont>
 #include <QMetaType>
 
-Q_DECLARE_METATYPE(QMarginsF)
+Q_DECLARE_METATYPE(QMarginsF);
 
 /**
  * @brief Class for drawing text on map.
  */
-	class MapText : public MapRect
+class MapText : public MapRect
 {
 	Q_OBJECT;
 	Q_PROPERTY(QString text READ text WRITE setText NOTIFY textChanged);

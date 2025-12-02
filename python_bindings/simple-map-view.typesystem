@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<typesystem package="PySimpleMapView">
+    <load-typesystem name="typesystem_core.xml" generate="no"/>
+    <load-typesystem name="typesystem_gui.xml" generate="no"/>
+    <load-typesystem name="typesystem_widgets.xml" generate="no"/>
+    <load-typesystem name="typesystem_positioning.xml" generate="no"/>
+    <load-typesystem name="typesystem_network.xml" generate="no"/>
+    
+    <value-type name="MapPoint" />
+    <value-type name="MapSize" />
+    <object-type name="TileServers" />
+
+    <object-type name="MapItem" />
+    <object-type name="MapEllipse" />
+    <object-type name="MapRect" />
+    <object-type name="MapImage" />
+    <object-type name="MapText" />
+    <object-type name="MapLines" />
+    <object-type name="MapPolygon" />
+
+    <object-type name="SimpleMapView">
+        <enum-type name="TileServerSource" />
+    </object-type>
+</typesystem>

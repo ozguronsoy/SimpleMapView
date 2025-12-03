@@ -27,7 +27,6 @@ file(TO_CMAKE_PATH "${PYSIDE6_DIR}" PYSIDE6_DIR)
 list(APPEND CMAKE_PREFIX_PATH "${SHIBOKEN6_GENERATOR_DIR}" "${PYSIDE6_DIR}")
 
 find_package(Shiboken6Tools REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Positioning Network)
 
 set(
     generated_sources

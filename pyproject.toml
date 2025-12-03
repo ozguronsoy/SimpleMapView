@@ -1,12 +1,17 @@
 [build-system]
-requires = ["scikit-build-core", "PySide6", "shiboken6", "shiboken6_generator"]
+requires = [
+    "scikit-build-core",
+    "cmake>=3.20",
+    "PySide6==6.10.1", 
+    "shiboken6==6.10.1", 
+    "shiboken6_generator==6.10.1"
+]
 build-backend = "scikit_build_core.build"
 
 [project]
 name = "PySimpleMapView"
 version = "1.2.0"
 description = "Python bindings for the SimpleMapView C++ Qt Widget"
-dependencies = ["PySide6"]
 
 [tool.scikit-build]
 cmake.build-type = "Release"

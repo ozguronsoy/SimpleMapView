@@ -20,6 +20,7 @@ A Qt widget for rendering tile maps.
     - [Add Marker](#add-marker)
     - [Change Default Marker Icon](#change-default-marker-icon)
 - [QML](#qml)
+- [Python](#python)
 - [Using Offline Maps](#using-offline-maps)
 
 ## Setup
@@ -220,7 +221,7 @@ mapView->setMarkerIcon(newIcon);
 
 ## QML
 
-``SimpleMapView`` also provides a QML component based on ``QQuickItem`` instead of ``QWidget``. Since ``QQuickItem`` uses GPU-accelerated rendering, it offers better performance.
+``SimpleMapView`` provides a QML component based on ``QQuickItem`` instead of ``QWidget``. Since ``QQuickItem`` uses GPU-accelerated rendering, it offers better performance.
 
 To use the QML component, you need to enable it in your build system first.
 
@@ -301,6 +302,32 @@ Window {
     }
 }
 
+```
+
+
+## Python
+
+To use ``SimpleMapView`` in ``PySide6`` applications, you have to build and install the **python module** by running ``pip install .`` command on the project's root.
+
+Here is a simple example on how to use in python:
+
+```py
+import sys
+from PySide6.QtWidgets import QApplication
+from PySimpleMapView import SimpleMapView, TileServers, MapText
+
+app = QApplication(sys.argv)
+
+map_view = SimpleMapView()
+map_view.setTileServer(TileServers.GOOGLE_MAP)
+
+marker = map_view.addMarker(map_view.center())
+marker.findChild(MapText).setText("Marker")
+
+map_view.resize(1280, 720)
+map_view.show()
+
+sys.exit(app.exec())
 ```
 
 ## Using Offline Maps

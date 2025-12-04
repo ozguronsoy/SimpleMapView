@@ -70,7 +70,6 @@ public:
 		Resource
 	};
 
-public:
 	explicit SimpleMapView(SimpleMapViewBase* parent = nullptr);
 	~SimpleMapView() = default;
 
@@ -269,7 +268,6 @@ private:
 	QPen extractBorderPenFromStyleSheet() const;
 #endif
 
-private:
 	int m_zoomLevel;
 	int m_minZoomLevel;
 	int m_maxZoomLevel;

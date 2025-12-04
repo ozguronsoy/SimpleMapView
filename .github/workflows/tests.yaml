@@ -1,0 +1,55 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  Desktop:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Xvfb (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt install -y xvfb
+      
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.10.1
+          target: desktop
+          modules: 'qtpositioning'
+          cached: true
+          
+      - name: Configure CMake
+        shell: bash
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DSIMPLE_MAP_VIEW_BUILD_TESTS=ON
+
+      - name: Build
+        shell: bash
+        working-directory: build
+        run: |
+          cmake --build .
+
+      - name: Run (Linux)
+        if: runner.os == 'Linux'
+        working-directory: build
+        run: xvfb-run ctest --output-on-failure
+
+      - name: Run (Windows / macOS)
+        if: runner.os != 'Linux'
+        shell: bash
+        working-directory: build
+        run: ctest -C Debug --output-on-failure

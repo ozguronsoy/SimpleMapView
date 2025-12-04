@@ -212,11 +212,11 @@ public slots:
 	QGeoCoordinate screenPositionToGeoCoordinate(const QPointF& screenPosition) const;
 
 signals:
-	/** A signal that's triggered when the zoom level changes. */
+	/** Triggered when the zoom level changes. */
 	void zoomLevelChanged();
-	/** A signal that's triggered when the center coordinate changes. */
+	/** Triggered when the center coordinate changes. */
 	void centerChanged();
-	/** A signal that's triggered when the tile server changes. */
+	/** Triggered when the tile server changes. */
 	void tileServerChanged();
 
 protected:

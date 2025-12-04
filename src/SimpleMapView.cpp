@@ -31,8 +31,6 @@
 
 #endif
 
-#define GET_IN_RANGE(v, minv, maxv) (std::min(std::max((v), (minv)), (maxv)))
-
 SimpleMapView::SimpleMapView(SimpleMapViewBase* parent)
 	: SimpleMapViewBase(parent),
 	m_zoomLevel(17),
@@ -104,7 +102,7 @@ int SimpleMapView::minZoomLevel() const
 
 void SimpleMapView::setMinZoomLevel(int minZoomLevel)
 {
-	m_minZoomLevel = GET_IN_RANGE(minZoomLevel, 0, m_maxZoomLevel);
+	m_minZoomLevel = std::clamp(minZoomLevel, 0, m_maxZoomLevel);
 	this->setZoomLevel(m_zoomLevel);
 }
 
@@ -115,7 +113,7 @@ int SimpleMapView::maxZoomLevel() const
 
 void SimpleMapView::setMaxZoomLevel(int maxZoomLevel)
 {
-	m_maxZoomLevel = GET_IN_RANGE(maxZoomLevel, m_minZoomLevel, INT_MAX);
+	m_maxZoomLevel = std::clamp(maxZoomLevel, m_minZoomLevel, INT_MAX);
 	this->setZoomLevel(m_zoomLevel);
 }
 
@@ -129,7 +127,7 @@ void SimpleMapView::setZoomLevel(int zoomLevel)
 	if (!this->isEnabled() || m_lockZoom) return;
 
 	const int oldZoomLevel = m_zoomLevel;
-	m_zoomLevel = GET_IN_RANGE(zoomLevel, m_minZoomLevel, m_maxZoomLevel);
+	m_zoomLevel = std::clamp(zoomLevel, m_minZoomLevel, m_maxZoomLevel);
 
 	if (oldZoomLevel != m_zoomLevel)
 	{
@@ -180,8 +178,8 @@ void SimpleMapView::setCenter(qreal latitude, qreal longitude)
 
 	bool isChanged = false;
 
-	latitude = GET_IN_RANGE(latitude, -90.0, 90.0);
-	longitude = GET_IN_RANGE(longitude, -180.0, 180.0);
+	latitude = std::clamp(latitude, -90.0, 90.0);
+	longitude = std::clamp(longitude, -180.0, 180.0);
 
 	if (latitude != this->latitude())
 	{
@@ -262,13 +260,13 @@ void SimpleMapView::setTileServer(const QString& tileServer, bool wait)
 		if (wait)
 		{
 			QEventLoop eventLoop;
-			(void)this->connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
+			(void)reply->connect(reply, &QNetworkReply::finished, &eventLoop, &QEventLoop::quit);
 			(void)eventLoop.exec();
 			handleResponse();
 		}
 		else
 		{
-			(void)this->connect(reply, &QNetworkReply::finished, this, handleResponse);
+			(void)reply->connect(reply, &QNetworkReply::finished, this, handleResponse);
 		}
 	}
 	else
@@ -610,7 +608,7 @@ void SimpleMapView::downloadTiles(const QString& path, const QGeoCoordinate& p1,
 
 				QNetworkReply* reply = m_networkManager.get(request);
 
-				(void)this->connect(reply, &QNetworkReply::finished, this,
+				(void)reply->connect(reply, &QNetworkReply::finished, this,
 					[this, downloadNextTile, increaseTilePosition, qrcFile, qrcTextStream, x_next, y_next, z_next, p1, p2, x_start, y_start, x_end, y_end, z_end, currentRequestCount, originalZ, dir, progressBar, downloadedTileCount, reply, x, y, z, tilePath]()
 					{
 						if (reply->error() == QNetworkReply::NoError)
@@ -878,7 +876,7 @@ void SimpleMapView::fetchTileFromRemote(const QPoint& tilePosition)
 	QNetworkReply* reply = m_networkManager.get(request);
 	m_replyMap[tileKey] = reply;
 
-	(void)this->connect(reply, &QNetworkReply::finished, this,
+	(void)reply->connect(reply, &QNetworkReply::finished, this,
 		[this, reply, tileKey]()
 		{
 			if (reply->error() == QNetworkReply::NoError)
@@ -891,7 +889,6 @@ void SimpleMapView::fetchTileFromRemote(const QPoint& tilePosition)
 			}
 			else
 			{
-				qDebug() << "[SimpleMapView]" << reply->errorString();
 				if (!m_abortingReplies)
 				{
 					m_backupTileServerIndex = 0;

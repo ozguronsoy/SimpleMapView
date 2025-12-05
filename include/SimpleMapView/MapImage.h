@@ -13,6 +13,10 @@ class MapImage : public MapRect
 	Q_PROPERTY(QString image WRITE setImage NOTIFY imageChanged);
 	Q_PROPERTY(Qt::AspectRatioMode aspectRatioMode READ aspectRatioMode WRITE setAspectRatioMode NOTIFY imageChanged);
 
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+    QML_ELEMENT;
+#endif
+
 public:
 	explicit MapImage(QObject* parent = nullptr);
 

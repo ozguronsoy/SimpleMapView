@@ -19,6 +19,10 @@ class MapText : public MapRect
 	Q_PROPERTY(QFont font READ font WRITE setFont NOTIFY fontChanged);
 	Q_PROPERTY(QMarginsF textPadding READ textPadding WRITE setTextPadding NOTIFY textPaddingChanged);
 
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+    QML_ELEMENT;
+#endif
+
 public:
 	explicit MapText(QObject* parent = nullptr);
 

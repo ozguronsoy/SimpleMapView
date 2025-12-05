@@ -34,7 +34,6 @@ CMake:
 find_package(Qt6 REQUIRED COMPONENTS Core)
 qt_standard_project_setup()
 
-set(SIMPLE_MAP_VIEW_USE_QML ON) # if QML app
 add_subdirectory(dependencies/SimpleMapView)
 
 set(CMAKE_AUTORCC ON)
@@ -51,8 +50,6 @@ target_link_libraries(mytarget PUBLIC
 
 qmake:
 ```
-SIMPLE_MAP_VIEW_ENABLE_RESOURCES = 1 # optional
-SIMPLE_MAP_VIEW_USE_QML = 1 # if QML app
 include(dependencies/SimpleMapView/SimpleMapView.pro)
 ```
 
@@ -227,38 +224,15 @@ To use the QML component, you need to enable it in your build system first.
 
 CMake:
 ```cmake
-set(SIMPLE_MAP_VIEW_USE_QML ON)
+set(SIMPLE_MAP_VIEW_BUILD_QML ON)
 ```
 
 qmake:
 ```
-SIMPLE_MAP_VIEW_USE_QML = 1
+SIMPLE_MAP_VIEW_BUILD_QML = 1
 ```
 
-Then in your ``main.cpp`` file, you need to register the QML components after creating the ``app`` instance.
-
-Sample main code:
-```c++
-#include <QGuiApplication>
-#include <QQmlApplicationEngine>
-#include "SimpleMapView.h"
-
-int main(int argc, char *argv[])
-{
-    QGuiApplication app(argc, argv);
-
-    SimpleMapView::registerQmlTypes();
-
-    QQmlApplicationEngine engine;
-    engine.load(QUrl(QStringLiteral("qrc:/qt/qml/yourapp/main.qml")));
-    if (engine.rootObjects().isEmpty())
-        return -1;
-
-    return app.exec();
-}
-```
-
-After that you can import and use the QML components in your ``.qml`` files.
+After that you can import and use the QML components in your ``QML`` files.
 
 ```qml
 import QtQuick
@@ -297,10 +271,15 @@ Window {
         }
 
         Component.onCompleted: {
-            map.addMarker(map.center)
+            var marker = map.addMarker(map.center)
+            var textItem = SimpleMapViewQmlHelpers.findChild(marker, "MapText")
+            if (textItem) {
+                textItem.setText("Marker!")
+            }
         }
     }
 }
+
 
 ```
 

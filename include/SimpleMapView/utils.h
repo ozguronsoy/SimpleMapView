@@ -95,7 +95,8 @@ class TileServers : public QObject
 	Q_PROPERTY(QString ESRI_WORLD_IMAGERY READ EsriWorldImagery CONSTANT);
 
 #ifdef SIMPLE_MAP_VIEW_USE_QML
-	QML_ELEMENT;
+    QML_SINGLETON;
+    QML_NAMED_ELEMENT(TileServers);
 #endif
 
 public:
@@ -132,15 +133,18 @@ public:
 
 #ifdef SIMPLE_MAP_VIEW_USE_QML
 
-class SimpleMapViewQmlHelpers final : public QObject
+class SimpleMapViewQmlHelpers : public QObject
 {
 	Q_OBJECT;
+    QML_SINGLETON;
+    QML_NAMED_ELEMENT(SimpleMapViewQmlHelpers);
 
 public:
 	Q_INVOKABLE static MapPoint createMapPoint(const QPointF& screenPoint);
 	Q_INVOKABLE static MapPoint createMapPoint(const QGeoCoordinate& geoPoint);
 	Q_INVOKABLE static MapSize createMapSize(const QSizeF& screenSize);
 	Q_INVOKABLE static MapSize createMapSize(const QGeoCoordinate& geoSize);
+    Q_INVOKABLE static QObject* findChild(QObject* parent, const QString& className);
 };
 
 #endif

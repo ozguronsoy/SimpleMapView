@@ -16,6 +16,10 @@ class MapEllipse : public MapItem
 	Q_PROPERTY(MapSize size READ size WRITE setSize NOTIFY sizeChanged);
 	Q_PROPERTY(QColor backgroundColor READ backgroundColor WRITE setBackgroundColor NOTIFY backgroundColorChanged);
 
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+    QML_ELEMENT;
+#endif
+
 public:
 	explicit MapEllipse(QObject* parent = nullptr);
 

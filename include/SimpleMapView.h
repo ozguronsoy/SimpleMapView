@@ -73,14 +73,6 @@ public:
 	explicit SimpleMapView(SimpleMapViewBase* parent = nullptr);
 	~SimpleMapView() = default;
 
-
-#ifdef SIMPLE_MAP_VIEW_USE_QML
-
-	/** Registers the QML types on run-time. Call this after creating the app instance. */
-	static void registerQmlTypes();
-
-#endif
-
 public slots:
 	/** Gets the minimum zoom level. */
 	int minZoomLevel() const;

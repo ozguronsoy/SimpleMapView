@@ -12,6 +12,10 @@ class MapRect : public MapEllipse
 {
 	Q_OBJECT;
 
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+    QML_ELEMENT;
+#endif
+
 public:
 	explicit MapRect(QObject* parent = nullptr);
 

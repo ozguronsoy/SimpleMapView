@@ -70,31 +70,6 @@ SimpleMapView::SimpleMapView(SimpleMapViewBase* parent)
 
 }
 
-#ifdef SIMPLE_MAP_VIEW_USE_QML
-
-void SimpleMapView::registerQmlTypes()
-{
-	static TileServers tileServersInstance;
-	static SimpleMapViewQmlHelpers qmlHelpersInstance;
-
-	(void)qmlRegisterType<SimpleMapView>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "SimpleMapView");
-
-	(void)qmlRegisterUncreatableType<MapPoint>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapPoint", "Value type only");
-	(void)qmlRegisterUncreatableType<MapSize>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapSize", "Value type only");
-
-	(void)qmlRegisterType<MapEllipse>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapEllipse");
-	(void)qmlRegisterType<MapRect>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapRect");
-	(void)qmlRegisterType<MapImage>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapImage");
-	(void)qmlRegisterType<MapLines>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapLines");
-	(void)qmlRegisterType<MapPolygon>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapPolygon");
-	(void)qmlRegisterType<MapText>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "MapText");
-
-	(void)qmlRegisterSingletonInstance<TileServers>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "TileServers", &tileServersInstance);
-	(void)qmlRegisterSingletonInstance<SimpleMapViewQmlHelpers>(SIMPLE_MAP_VIEW_QML_URI, SIMPLE_MAP_VIEW_VERSION_MAJOR, SIMPLE_MAP_VIEW_VERSION_MINOR, "SimpleMapViewQmlHelpers", &qmlHelpersInstance);
-}
-
-#endif
-
 int SimpleMapView::minZoomLevel() const
 {
 	return m_minZoomLevel;

@@ -12,6 +12,10 @@ class MapLines : public MapItem
 	Q_OBJECT;
 	Q_PROPERTY(QVector<MapPoint> points READ points WRITE setPoints);
 
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+    QML_ELEMENT;
+#endif
+
 public:
 	explicit MapLines(QObject* parent = nullptr);
 

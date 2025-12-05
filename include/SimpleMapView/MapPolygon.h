@@ -12,6 +12,10 @@ class MapPolygon : public MapLines
 	Q_OBJECT;
 	Q_PROPERTY(QColor backgroundColor READ backgroundColor WRITE setBackgroundColor NOTIFY backgroundColorChanged);
 
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+    QML_ELEMENT;
+#endif
+
 public:
 	explicit MapPolygon(QObject* parent = nullptr);
 

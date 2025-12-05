@@ -159,4 +159,13 @@ MapPoint SimpleMapViewQmlHelpers::createMapPoint(const QGeoCoordinate& geoPoint)
 MapSize SimpleMapViewQmlHelpers::createMapSize(const QSizeF& screenSize) { return MapSize(screenSize); }
 MapSize SimpleMapViewQmlHelpers::createMapSize(const QGeoCoordinate& geoSize) { return MapSize(geoSize); }
 
+QObject* SimpleMapViewQmlHelpers::findChild(QObject* parent, const QString& className)
+{
+    if (parent)
+        for (QObject* child : parent->children())
+            if (QString(child->metaObject()->className()).contains(className))
+                return child;
+    return nullptr;
+}
+
 #endif

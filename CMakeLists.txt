@@ -23,7 +23,7 @@ set(SIMPLE_MAP_VIEW_QT_LIBRARIES Qt::Core Qt::Positioning Qt::Network)
 
 if(SIMPLE_MAP_VIEW_BUILD_QML)
 
-    list(APPEND SIMPLE_MAP_VIEW_DEFINITIONS SIMPLE_MAP_VIEW_USE_QML SIMPLE_MAP_VIEW_QML_URI="${SIMPLE_MAP_VIEW_QML_URI}")
+    list(APPEND SIMPLE_MAP_VIEW_DEFINITIONS SIMPLE_MAP_VIEW_USE_QML)
     list(APPEND SIMPLE_MAP_VIEW_QT_COMPONENTS Quick)
     list(APPEND SIMPLE_MAP_VIEW_QT_LIBRARIES Qt::Quick)
 
@@ -40,7 +40,7 @@ file(GLOB_RECURSE SIMPLE_MAP_VIEW_HEADERS include/*.h)
 file(GLOB_RECURSE SIMPLE_MAP_VIEW_SOURCES src/*.cpp)
 
 if(SIMPLE_MAP_VIEW_BUILD_TESTS OR SIMPLE_MAP_VIEW_BUILD_PYTHON_BINDINGS)
-    
+
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTORCC ON)
     set(CMAKE_AUTOUIC ON)
@@ -52,7 +52,26 @@ if(SIMPLE_MAP_VIEW_BUILD_TESTS OR SIMPLE_MAP_VIEW_BUILD_PYTHON_BINDINGS)
 
 endif()
 
-add_library(SimpleMapView STATIC ${SIMPLE_MAP_VIEW_HEADERS} ${SIMPLE_MAP_VIEW_SOURCES})
+if(SIMPLE_MAP_VIEW_BUILD_QML)
+
+    qt_add_library(SimpleMapView STATIC)
+    qt_add_qml_module(
+        SimpleMapView
+        URI ${SIMPLE_MAP_VIEW_QML_URI}
+        VERSION ${PROJECT_VERSION}
+        SOURCES ${SIMPLE_MAP_VIEW_HEADERS} ${SIMPLE_MAP_VIEW_SOURCES}
+        DEPENDENCIES
+            QtQuick
+            QtPositioning
+        OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/com/github/ozguronsoy/SimpleMapView
+    )
+
+else()
+
+    add_library(SimpleMapView STATIC ${SIMPLE_MAP_VIEW_HEADERS} ${SIMPLE_MAP_VIEW_SOURCES})
+
+endif()
+
 target_compile_definitions(SimpleMapView PUBLIC ${SIMPLE_MAP_VIEW_DEFINITIONS})
 target_include_directories(
     SimpleMapView

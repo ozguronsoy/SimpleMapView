@@ -1,0 +1,3 @@
+.vscode
+build
+tests/python/__pycache__

@@ -6,8 +6,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  Test:
+  Core:
     name: ${{ matrix.os }} - ${{ matrix.config_name }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -21,25 +22,13 @@ jobs:
           - config_name: "QML"
             cmake_flags: "-DSIMPLE_MAP_VIEW_BUILD_QML=ON -DSIMPLE_MAP_VIEW_BUILD_TESTS=ON"
             build_type: "Debug"
-    
-    runs-on: ${{ matrix.os }}
-    
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Install Xvfb (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt install -y xvfb
-      
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: 6.10.1
-          target: desktop
-          modules: 'qtpositioning'
-          cached: true
+      - name: Setup Qt Environment
+        uses: ./.github/actions/setup-qt-env
           
       - name: Configure CMake
         shell: bash
@@ -64,3 +53,39 @@ jobs:
         shell: bash
         working-directory: build
         run: ctest -C ${{ matrix.build_type }} --output-on-failure
+
+  Python:
+    name: Python ${{ matrix.python-versions }} ${{ matrix.os }}
+    needs: Core
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-versions: ['3.10', '3.11', '3.12', '3.13']
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Qt Environment
+        uses: ./.github/actions/setup-qt-env
+
+      - name: Setup Python Environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: ${{ matrix.python-versions }}
+
+      - name: Install Bindings
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+        run: pip install .
+
+      - name: Run (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run pytest
+
+      - name: Run (Windows)
+        if: runner.os != 'Linux'
+        run: pytest

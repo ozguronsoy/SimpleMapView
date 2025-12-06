@@ -158,7 +158,6 @@ private slots:
 
         auto mapScreenCenter = map.rect().center();
         QTest::mousePress(&map, Qt::LeftButton, Qt::KeyboardModifiers(), mapScreenCenter);
-
         qreal lastLong = map.longitude();
         qreal lastLat = map.latitude();
         spy.clear();
@@ -171,9 +170,9 @@ private slots:
             lastLong = map.longitude();
             lastLat = map.latitude();
         }
+        QTest::mouseRelease(&map, Qt::LeftButton);
 
         QTest::mousePress(&map, Qt::LeftButton, Qt::KeyboardModifiers(), mapScreenCenter);
-
         lastLong = map.longitude();
         lastLat = map.latitude();
         for (size_t i = 1; i <= mouseMoveCount; ++i)
@@ -184,6 +183,7 @@ private slots:
             lastLong = map.longitude();
             lastLat = map.latitude();
         }
+        QTest::mouseRelease(&map, Qt::LeftButton);
 
         map.setLatitude(10.0);
         spy.clear();
@@ -219,7 +219,6 @@ private slots:
         QVERIFY2(map.center() == QGeoCoordinate(30, 40), "Failed to unlock geolocation.");
 
         QTest::mousePress(&map, Qt::LeftButton, Qt::KeyboardModifiers(), mapScreenCenter);
-
         map.disableMouseMoveMap();
         QVERIFY2(map.isMouseMoveMapDisabled(), "Failed to disable moving map via mouse.");
         QGeoCoordinate lastCenter = map.center();
@@ -233,6 +232,7 @@ private slots:
         }
         map.enableMouseMoveMap();
         QVERIFY2(!map.isMouseMoveMapDisabled(), "Failed to enable moving map via mouse.");
+        QTest::mouseRelease(&map, Qt::LeftButton);
     }
 
     void test_TileServers()
@@ -249,7 +249,7 @@ private slots:
 
         map.setTileServer(invalidTileMapUrl);
         QVERIFY2(map.tileServer() == TileServers::OSM, "Invalid tile server.");
-        
+
         QTest::qWait(5000);
         QCOMPARE(spy.count(), 1);
 

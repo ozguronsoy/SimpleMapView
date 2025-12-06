@@ -1,0 +1,38 @@
+name: 'Setup Python Environment'
+description: 'Installs Python, PySide6/Shiboken dependencies, and configurs Clang'
+
+inputs:
+  python-version:
+    description: 'The version of Python to install'
+    required: false
+    default: '3.12'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        pip install --upgrade pip
+        pip install pytest pytest-qt PySide6 shiboken6
+
+    - name: Install Dependencies (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y llvm libclang-dev
+
+        CLANG_LIB_FILE=$(find /usr/lib/llvm-* -name "libclang.so" 2>/dev/null | head -n 1)
+        CLANG_LIB_DIR=$(dirname "$CLANG_LIB_FILE")
+        CLANG_ROOT_DIR=$(dirname "$CLANG_LIB_DIR")
+        QT_LIB_DIR=$(qtpaths --query QT_INSTALL_LIBS)
+
+        echo "Detected Clang Root: $CLANG_ROOT_DIR"
+        echo "CLANG_INSTALL_DIR=$CLANG_ROOT_DIR" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=$CLANG_LIB_DIR:$QT_LIB_DIR:${LD_LIBRARY_PATH}" >> $GITHUB_ENV

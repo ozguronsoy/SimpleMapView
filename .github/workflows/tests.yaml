@@ -6,10 +6,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  Widgets:
+  Test:
+    name: ${{ matrix.os }} - ${{ matrix.config_name }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        config_name: [Widgets, QML]
+        include:
+          - config_name: "Widgets"
+            cmake_flags: "-DSIMPLE_MAP_VIEW_BUILD_TESTS=ON"
+            build_type: "Debug"
+          
+          - config_name: "QML"
+            cmake_flags: "-DSIMPLE_MAP_VIEW_BUILD_QML=ON -DSIMPLE_MAP_VIEW_BUILD_TESTS=ON"
+            build_type: "Debug"
     
     runs-on: ${{ matrix.os }}
     
@@ -35,13 +46,13 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DSIMPLE_MAP_VIEW_BUILD_TESTS=ON
+          cmake .. ${{ matrix.cmake_flags }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
 
       - name: Build
         shell: bash
         working-directory: build
         run: |
-          cmake --build .
+          cmake --build . --config ${{ matrix.build_type }}
 
       - name: Run (Linux)
         if: runner.os == 'Linux'
@@ -52,4 +63,4 @@ jobs:
         if: runner.os != 'Linux'
         shell: bash
         working-directory: build
-        run: ctest -C Debug --output-on-failure
+        run: ctest -C ${{ matrix.build_type }} --output-on-failure

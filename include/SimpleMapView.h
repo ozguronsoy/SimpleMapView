@@ -70,6 +70,10 @@ public:
 		Resource
 	};
 
+#ifdef SIMPLE_MAP_VIEW_USE_QML
+	Q_ENUM(TileServerSource);
+#endif
+
 	explicit SimpleMapView(SimpleMapViewBase* parent = nullptr);
 	~SimpleMapView() = default;
 

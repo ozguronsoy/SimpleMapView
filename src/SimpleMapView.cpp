@@ -204,7 +204,7 @@ void SimpleMapView::setTileServer(const QString& tileServer, bool wait)
 
 	if (tileServer.startsWith("http"))
 	{
-		QNetworkRequest request(this->formatTileServerUrlString(tileServer, QPoint(0, 0), 0));
+		QNetworkRequest request(this->formatTileServerUrlString(tileServer, QPoint(0, 0), 1));
 		request.setRawHeader("User-Agent", "Qt/SimpleMapView");
 		request.setTransferTimeout(5000);
 

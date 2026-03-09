@@ -144,6 +144,8 @@ QString TileServers::OpenTopoMap() const { return TileServers::OPENTOPOMAP; }
 QString TileServers::GoogleMap() const { return TileServers::GOOGLE_MAP; }
 QString TileServers::GoogleSat() const { return TileServers::GOOGLE_SAT; }
 QString TileServers::GoogleLand() const { return TileServers::GOOGLE_LAND; }
+QString TileServers::AzureMap() const { return TileServers::AZURE_MAP; }
+QString TileServers::AzureImagery() const { return TileServers::AZURE_IMAGERY; }
 QString TileServers::CartoDbPositron() const { return TileServers::CARTODB_POSITRON; }
 QString TileServers::CartoDbDarkMatter() const { return TileServers::CARTODB_DARK_MATTER; }
 QString TileServers::ThunderforestTransport() const { return TileServers::THUNDERFOREST_TRANSPORT; }

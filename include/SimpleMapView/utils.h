@@ -86,6 +86,8 @@ class TileServers : public QObject
 	Q_PROPERTY(QString GOOGLE_MAP READ GoogleMap CONSTANT);
 	Q_PROPERTY(QString GOOGLE_SAT READ GoogleSat CONSTANT);
 	Q_PROPERTY(QString GOOGLE_LAND READ GoogleLand CONSTANT);
+	Q_PROPERTY(QString AZURE_MAP READ AzureMap CONSTANT);
+	Q_PROPERTY(QString AZURE_IMAGERY READ AzureImagery CONSTANT);
 	Q_PROPERTY(QString CARTODB_POSITRON READ CartoDbPositron CONSTANT);
 	Q_PROPERTY(QString CARTODB_DARK_MATTER READ CartoDbDarkMatter CONSTANT);
 	Q_PROPERTY(QString THUNDERFOREST_TRANSPORT READ ThunderforestTransport CONSTANT);
@@ -108,6 +110,8 @@ public:
 	QString GoogleMap() const;
 	QString GoogleSat() const;
 	QString GoogleLand() const;
+	QString AzureMap() const;
+	QString AzureImagery() const;
 	QString CartoDbPositron() const;
 	QString CartoDbDarkMatter() const;
 	QString ThunderforestTransport() const;
@@ -122,6 +126,8 @@ public:
 	static constexpr const char* GOOGLE_MAP = "https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga";
 	static constexpr const char* GOOGLE_SAT = "https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga";
 	static constexpr const char* GOOGLE_LAND = "https://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}&s=Ga";
+	static constexpr const char* AZURE_MAP = "https://atlas.microsoft.com/map/tile?api-version=2024-04-01&tilesetId=microsoft.base.road&zoom={z}&x={x}&y={y}&subscription-key={api_key}";
+	static constexpr const char* AZURE_IMAGERY = "https://atlas.microsoft.com/map/tile?api-version=2024-04-01&tilesetId=microsoft.imagery&zoom={z}&x={x}&y={y}&subscription-key={api_key}";
 	static constexpr const char* CARTODB_POSITRON = "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png";
 	static constexpr const char* CARTODB_DARK_MATTER = "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png";
 	static constexpr const char* THUNDERFOREST_TRANSPORT = "https://tile.thunderforest.com/transport/{z}/{x}/{y}.png";

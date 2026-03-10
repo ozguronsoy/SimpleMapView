@@ -77,6 +77,7 @@ you can use any tile server that contains ``{x}``, ``{y}``, and ``{z}`` coordina
 ```c++
 mapView->setTileServer(TileServers::GOOGLE_MAP);
 mapView->setTileServer(TileServers::GOOGLE_SAT);
+mapView->setTileServer(QString(TileServers::AZURE_MAP).replace("{api_key}", "YOUR_API_KEY"));
 mapView->setTileServer("https://a.tile.maptiler.com/{z}/{x}/{y}.png?key=YOUR_API_KEY");
 ``` 
 ![satellite_map](readme_images/map_satellite.png)

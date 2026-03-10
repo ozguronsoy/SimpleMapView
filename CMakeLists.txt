@@ -4,7 +4,7 @@ if (CMAKE_CXX_STANDARD LESS 17)
 	message(FATAL_ERROR "C++17 or higher is required")
 endif()
 
-project(SimpleMapView VERSION 1.2.0 LANGUAGES CXX)
+project(SimpleMapView VERSION 1.2.1 LANGUAGES CXX)
 
 option(SIMPLE_MAP_VIEW_BUILD_QML "Build as QML component" OFF)
 option(SIMPLE_MAP_VIEW_BUILD_PYTHON_BINDINGS "Build python bindings" OFF)

@@ -87,7 +87,7 @@ jobs:
         shell: bash
         env:
           PYTHONIOENCODING: utf-8
-        run: pip install .
+        run: pip install . --no-build-isolation
 
       - name: Run (Linux)
         if: runner.os == 'Linux'

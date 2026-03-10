@@ -21,7 +21,7 @@ runs:
       shell: bash
       run: |
         pip install --upgrade pip
-        pip install pytest pytest-qt PySide6==${{ inputs.qt_version }} shiboken6==${{ inputs.qt_version }}
+        pip install pytest pytest-qt scikit-build-core PySide6==${{ inputs.qt_version }} shiboken6==${{ inputs.qt_version }} shiboken6_generator==${{ inputs.qt_version }}
 
     - name: Install Dependencies (Linux)
       if: runner.os == 'Linux'

@@ -1,6 +1,11 @@
 name: 'Setup Qt Environment'
 description: 'Installs Xvfb and Qt'
 
+inputs:
+  qt_version:
+    description: 'The version of Qt.'
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -12,7 +17,7 @@ runs:
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: 6.10.1
+        version: ${{ inputs.qt_version }}
         target: desktop
         modules: 'qtpositioning'
         cached: true

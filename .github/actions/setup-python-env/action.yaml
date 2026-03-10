@@ -2,10 +2,12 @@ name: 'Setup Python Environment'
 description: 'Installs Python, PySide6/Shiboken dependencies, and configurs Clang'
 
 inputs:
-  python-version:
-    description: 'The version of Python to install'
-    required: false
-    default: '3.12'
+  python_version:
+    description: 'The version of Python.'
+    required: true
+  qt_version:
+    description: 'The version of Qt.'
+    required: true
 
 runs:
   using: "composite"
@@ -13,13 +15,13 @@ runs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ inputs.python-version }}
+        python-version: ${{ inputs.python_version }}
 
     - name: Install Dependencies
       shell: bash
       run: |
         pip install --upgrade pip
-        pip install pytest pytest-qt PySide6 shiboken6
+        pip install pytest pytest-qt PySide6==${{ inputs.qt_version }} shiboken6==${{ inputs.qt_version }}
 
     - name: Install Dependencies (Linux)
       if: runner.os == 'Linux'
